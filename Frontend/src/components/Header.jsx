@@ -20,8 +20,7 @@ const Header = () => {
         { title: 'Doctors', path: '/doctors' },
         { title: 'Hospitals', path: '/hospitals'},
         { title: 'Referrals', path: '/referrals'},
-        { title: 'About', path: '/about-us' },
-        { title: 'Contact', path: '/contact-us' },
+
     ];
 
     return (
