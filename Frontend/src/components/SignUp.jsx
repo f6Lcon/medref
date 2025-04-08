@@ -33,14 +33,21 @@ const SignUp = () => {
             age: formData.age,
         };
 
-        try {
-            const response = await axios.post('http://localhost:6005/api/patients/register', formDataToSend, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
+        const token = localStorage.getItem('token');  // Retrieve the token from localStorage
 
-            console.log('Patient registered successfully:', response.data);
+        try {
+            const response = await axios.post(
+                'http://localhost:9000/api/users/register', 
+                formDataToSend,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // 'Authorization': token ? `Bearer ${token}` : '',  // Send the token if available
+                    },
+                }
+            );
+
+            console.log('User registered successfully:', response.data);
             if (response.data.name) {
                 navigate('/home'); // Navigate to /home
             }
@@ -53,7 +60,7 @@ const SignUp = () => {
                 age: '',
             });
 
-            alert('Patient registered successfully!');
+            alert('User registered successfully!');
         } catch (error) {
             console.error('Error during registration:', error.response?.data || error.message);
             alert('Registration failed. Please try again.');
@@ -132,6 +139,7 @@ const SignUp = () => {
                                 <option value="" disabled>Select</option>
                                 <option value="doctor">Doctor</option>
                                 <option value="patient">Patient</option>
+                                <option value="admin">admin</option>
                             </select>
                         </div>
                     </div>
