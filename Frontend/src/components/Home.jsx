@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import Review from './Review';
+// import Review from './Review';
 import { FaHospital, FaUserMd, FaCalendarCheck, FaHeartbeat, FaAmbulance, FaLaptopMedical } from 'react-icons/fa';
 import Slider from 'react-slick'; 
 import 'slick-carousel/slick/slick.css'; 
@@ -264,7 +264,6 @@ const images = [
             </Link>
           </div>
         </section>
-        <Review />
       </div>
     );
 };

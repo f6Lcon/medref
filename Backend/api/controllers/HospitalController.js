@@ -1,53 +1,104 @@
-import { Hospital } from "../models/Hospital.js";
-export const createHospital = async (req, res) => {
-  try {
-    const hospital = new Hospital(req.body);
-    await hospital.save();
+import asyncHandler from 'express-async-handler';
+import Hospital from '../models/Hospital.js';
+
+// @desc    Create a new hospital
+// @route   POST /api/hospitals
+// @access  Private (Admin)
+const createHospital = asyncHandler(async (req, res) => {
+    const { name, address, contactPhone, active } = req.body;
+
+    if (!name) {
+        res.status(400);
+        throw new Error('Hospital name is required');
+    }
+
+    const hospitalExists = await Hospital.findOne({ name });
+    if (hospitalExists) {
+        res.status(400);
+        throw new Error('Hospital with this name already exists');
+    }
+
+    const hospital = await Hospital.create({
+        name,
+        address,
+        contactPhone,
+        active,
+    });
+
     res.status(201).json(hospital);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
+});
 
-// Get all hospitals
-export const getHospitals = async (req, res) => {
-  try {
-    const hospitals = await Hospital.find();
-    res.status(200).json(hospitals);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+// @desc    Get all active hospitals (add filtering later if needed)
+// @route   GET /api/hospitals
+// @access  Private (Staff, Doctor, Admin) - Needed for creating referrals/appointments
+const getHospitals = asyncHandler(async (req, res) => {
+    // Can add filters like ?active=true later
+    const hospitals = await Hospital.find({ active: true }); // Usually only show active ones
+    res.json(hospitals);
+});
 
-// Get a hospital by ID
-export const getHospitalById = async (req, res) => {
-  try {
+// @desc    Get hospital by ID
+// @route   GET /api/hospitals/:id
+// @access  Private (Staff, Doctor, Admin)
+const getHospitalById = asyncHandler(async (req, res) => {
     const hospital = await Hospital.findById(req.params.id);
-    if (!hospital) return res.status(404).json({ error: 'Hospital not found' });
-    res.status(200).json(hospital);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
 
-// Update hospital info
-export const updateHospital = async (req, res) => {
-  try {
-    const hospital = await Hospital.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!hospital) return res.status(404).json({ error: 'Hospital not found' });
-    res.status(200).json(hospital);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
+    if (hospital) {
+        res.json(hospital);
+    } else {
+        res.status(404);
+        throw new Error('Hospital not found');
+    }
+});
 
-// Delete a hospital
-export const deleteHospital = async (req, res) => {
-  try {
-    const hospital = await Hospital.findByIdAndDelete(req.params.id);
-    if (!hospital) return res.status(404).json({ error: 'Hospital not found' });
-    res.status(200).json({ message: 'Hospital deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// @desc    Update hospital
+// @route   PUT /api/hospitals/:id
+// @access  Private (Admin)
+const updateHospital = asyncHandler(async (req, res) => {
+    const hospital = await Hospital.findById(req.params.id);
+
+    if (hospital) {
+        hospital.name = req.body.name || hospital.name;
+        hospital.address = req.body.address || hospital.address; // Assumes full address obj overwrite or null
+        hospital.contactPhone = req.body.contactPhone || hospital.contactPhone;
+        hospital.active = req.body.active !== undefined ? req.body.active : hospital.active;
+
+        // Add logic if address is partially updated
+
+        const updatedHospital = await hospital.save();
+        res.json(updatedHospital);
+    } else {
+        res.status(404);
+        throw new Error('Hospital not found');
+    }
+});
+
+// @desc    Delete (or deactivate) a hospital
+// @route   DELETE /api/hospitals/:id
+// @access  Private (Admin)
+const deleteHospital = asyncHandler(async (req, res) => {
+    const hospital = await Hospital.findById(req.params.id);
+
+    if (hospital) {
+        // Option 1: Soft delete (recommended)
+        hospital.active = false;
+        await hospital.save();
+        res.json({ message: 'Hospital deactivated' });
+
+        // Option 2: Hard delete (use with caution, check dependencies)
+        // await hospital.deleteOne();
+        // res.json({ message: 'Hospital removed' });
+    } else {
+        res.status(404);
+        throw new Error('Hospital not found');
+    }
+});
+
+
+export {
+    createHospital,
+    getHospitals,
+    getHospitalById,
+    updateHospital,
+    deleteHospital,
 };

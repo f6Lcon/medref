@@ -1,32 +1,22 @@
-// models/Patient.js
 import mongoose from 'mongoose';
 
-const patientSchema = mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  gender: {
-    type: String,
-    required: true,
-  },
-  mobile: {
-    type: String,
-    required: true,
-  },
-  patientId: {
-    type: String,
-    required: true,
-  },
-  age: {
-    type: Number,
-    require: true
-  }
+const patientSchema = new mongoose.Schema({
+   // ... (schema definition remains the same)
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    dateOfBirth: { type: Date, required: true },
+    gender: { type: String, enum: ['Male', 'Female', 'Other'] },
+    contact: {
+        phone: String,
+        email: String,
+    },
+    address: {
+        street: String,
+        city: String,
+        state: String,
+        zip: String,
+    },
 }, { timestamps: true });
 
-export const Patient = mongoose.model('Patient', patientSchema);
+const Patient = mongoose.model('Patient', patientSchema);
+export default Patient;

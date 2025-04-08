@@ -1,17 +1,24 @@
-// routes/hospitalRoutes.js
 import express from 'express';
 import {
-  createHospital,
-  getHospitals,
-  updateHospital,
-  deleteHospital,
-} from '../controllers/HospitalController.js';
+    createHospital,
+    getHospitals,
+    getHospitalById,
+    updateHospital,
+    deleteHospital,
+} from '../controllers/hospitalController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/create-hospital', createHospital);
-router.get('/get-hospitals', getHospitals);
-router.put('/update-hospital/:id', updateHospital);
-router.post('/delete-hospital', deleteHospital);
+router.route('/')
+    .post(protect, authorize('admin'), createHospital)
+    // Accessible to more roles for selection purposes
+    .get(protect, authorize('admin', 'staff', 'doctor'), getHospitals);
+
+router.route('/:id')
+    // Accessible to more roles for selection purposes
+    .get(protect, authorize('admin', 'staff', 'doctor'), getHospitalById)
+    .put(protect, authorize('admin'), updateHospital)
+    .delete(protect, authorize('admin'), deleteHospital);
 
 export default router;

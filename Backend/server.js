@@ -1,38 +1,23 @@
-import express from "express";
-import { PORT, mongoDBUrl } from "./config.js";
-import cors from "cors";
-import mongoose from 'mongoose';
-import patientRoutes from './api/routes/PatientRoute.js';
-import hospitalRoutes from './api/routes/HospitalRoute.js';
+// ... other imports
+import connectDB from './config/db.js';
+import { notFound, errorHandler } from './api/middleware/errorMiddleware.js';
 
+// --- Import Routes ---
+import authRoutes from './routes/authRoutes.js';
+import patientRoutes from './routes/patientRoutes.js';
+import doctorRoutes from './routes/doctorRoutes.js';
+import referralRoutes from './routes/referralRoutes.js';
+import appointmentRoutes from './routes/appointmentRoutes.js';
+import hospitalRoutes from './routes/hospitalRoutes.js'; // <-- Add this import
 
+// ... (dotenv.config(), connectDB(), app initialization, middleware) ...
 
-const app = express();
-
-
-app.use(express.json());
-app.use(cors());
-
-app.get('/', (req, res) => {
-  return res.status(234).send('hello world');
-});
-
+// --- API Routes ---
+app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
-app.use('/api/hospitals', hospitalRoutes);
-console.log(mongoDBUrl)
-mongoose
-  .connect(mongoDBUrl)
-  .then(() => {
-    console.log('App connected to database');
-  })
-  .catch((error) => {
-    console.log(error);
-  });
+app.use('/api/doctors', doctorRoutes);
+app.use('/api/referrals', referralRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/hospitals', hospitalRoutes); // <-- Add this route
 
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`App is listening to port: ${PORT}`);
-  });
-}
-
-export default app;
+// ... (Health check, Error Handling, Server Start) ...
