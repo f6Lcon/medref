@@ -25,7 +25,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-4">
-            <h3 className="text-xl font-bold text-accent">MRAS</h3>
+            <h3 className="text-xl font-bold text-accent">MEDREF</h3>
             <p className="text-[1rem]">
               Revolutionizing healthcare management with cutting-edge technology and compassionate care.
             </p>

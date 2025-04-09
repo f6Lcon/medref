@@ -29,7 +29,7 @@ const Header = () => {
                 <div className="flex justify-between items-center">
                     <Link to="/" className="flex items-center space-x-2">
                         <img src={Logo} alt="Health Nest Logo" className="h-10 w-auto" />
-                        <span className="text-2xl font-bold text-accent">MRAS</span>
+                        <span className="text-2xl font-bold text-accent">MEDREF</span>
                     </Link>
 
                     <nav className="hidden md:flex space-x-1">

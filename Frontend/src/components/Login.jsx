@@ -39,7 +39,7 @@ const Login = () => {
         className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full"
       >
         <h2 className="text-3xl font-bold text-primary mb-6 text-center">
-          Login to MRAS
+          Login to MEDREF
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

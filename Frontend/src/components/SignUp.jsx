@@ -68,7 +68,7 @@ const SignUp = () => {
                 transition={{ duration: 0.5 }}
                 className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full"
             >
-                <h2 className="text-3xl font-bold text-primary mb-6 text-center">Sign Up MRAS</h2>
+                <h2 className="text-3xl font-bold text-primary mb-6 text-center">Sign Up MEDREF</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>

@@ -113,7 +113,7 @@ const images = [
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              Welcome to MRAS
+              Welcome to MEDREF
             </motion.h1>
             <motion.p
               className="text-lg sm:text-xl mb-8"
@@ -181,7 +181,7 @@ const images = [
     </div>
     <div className="md:w-1/2 md:pl-8 flex flex-col justify-between"> {}
       <h2 className="text-3xl font-bold text-center mb-8 text-primary">
-        About MRAS
+        About MEDREF
       </h2>
       <div className="flex-grow"> {}
         <p className="text-gray-600 mb-4 text-[1.1rem] font-montserrat">
@@ -250,7 +250,7 @@ const images = [
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
             <p className="mb-8">
-              Join MRAS today and experience the future of healthcare
+              Join MEDREF today and experience the future of healthcare
               management.
             </p>
             <Link to="/signup">
