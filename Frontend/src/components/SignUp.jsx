@@ -389,7 +389,7 @@ const SignUp = () => {
                         value={formData.street}
                         onChange={handleChange}
                         className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="123 Main St"
+                        placeholder="1957 Karu Main"
                         required
                       />
                     </div>
@@ -407,7 +407,7 @@ const SignUp = () => {
                         value={formData.city}
                         onChange={handleChange}
                         className="pl-4 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="New York"
+                        placeholder="Nakuru"
                         required
                       />
                     </div>
@@ -422,7 +422,7 @@ const SignUp = () => {
                         value={formData.state}
                         onChange={handleChange}
                         className="pl-4 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="NY"
+                        placeholder="Central"
                         required
                       />
                     </div>
@@ -455,7 +455,7 @@ const SignUp = () => {
                         value={formData.country}
                         onChange={handleChange}
                         className="pl-4 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="United States"
+                        placeholder="Kenya"
                         required
                       />
                     </div>

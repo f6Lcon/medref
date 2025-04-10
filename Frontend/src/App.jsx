@@ -20,6 +20,8 @@ import Login from "./components/Login";
 import { useState } from "react";
 import LoginContext from "./context/LoginContext";
 import Hospitals from "./components/Hospitals";
+import PatientDashboard from "./components/PatientDashboard";
+import DoctorDashboard from "./components/DoctorDashboard";
 
 function App() {
   const [doctors, setDoctors] = useState([
@@ -144,6 +146,8 @@ function App() {
               />
               
               <Route path="/hospitals" element={<Hospitals />} />
+              <Route path="/patient-dashboard" element={<PatientDashboard />} />
+              <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
 
               <Route path="/home" element={<Home />} />
               <Route path="/admin" element={<Admin />} />
