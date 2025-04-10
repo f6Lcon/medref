@@ -93,7 +93,7 @@ npm run dev        # Run in development mode using nodemon
 npm start          # Run the server in production
 
 ## 📁 Folder Structure
-
+`
 mras_finalYear/
 ├── controllers/
 ├── middleware/
@@ -104,7 +104,7 @@ mras_finalYear/
 ├── server.js
 ├── README.md
 └── medical_referral_api.postman_collection.json
-
+`
 ## 👨‍⚕️ Roles & Permissions
 Role	Description
 Admin	Manage hospitals, users
@@ -114,6 +114,6 @@ Patient	View doctors, book appointments
 ## 🧪 Testing
 
 You can use Postman, Insomnia, or your frontend app to test API functionality.
-## 🤝 Contributing
+##  🤝 Contributing
 
 Pull requests are welcome. For major changes, open an issue first to discuss what you would like to change.
