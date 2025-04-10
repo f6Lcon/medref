@@ -1,38 +1,40 @@
-import express from "express";
-import { PORT, mongoDBUrl } from "./config.js";
-import cors from "cors";
-import mongoose from 'mongoose';
-import patientRoutes from './api/routes/PatientRoute.js';
-import hospitalRoutes from './api/routes/HospitalRoute.js';
+import express from "express"
+import dotenv from "dotenv"
+import cors from "cors"
+import connectDB from "./config/db.js"
+import authRoutes from "./routes/auth.routes.js"
+import patientRoutes from "./routes/patient.routes.js"
+import doctorRoutes from "./routes/doctor.routes.js"
+import hospitalRoutes from "./routes/hospital.routes.js"
+import appointmentRoutes from "./routes/appointment.routes.js"
+import referralRoutes from "./routes/referral.routes.js"
+import { notFound, errorHandler } from "./middleware/error.middleware.js"
 
+dotenv.config()
 
+// Connect to database
+connectDB()
 
-const app = express();
+const app = express()
 
+// Middleware
+app.use(cors())
+app.use(express.json())
 
-app.use(express.json());
-app.use(cors());
+// Routes
+app.use("/api/auth", authRoutes)
+app.use("/api/patients", patientRoutes)
+app.use("/api/doctors", doctorRoutes)
+app.use("/api/hospitals", hospitalRoutes)
+app.use("/api/appointments", appointmentRoutes)
+app.use("/api/referrals", referralRoutes)
 
-app.get('/', (req, res) => {
-  return res.status(234).send('hello world');
-});
+// Error handling middleware
+app.use(notFound)
+app.use(errorHandler)
 
-app.use('/api/patients', patientRoutes);
-app.use('/api/hospitals', hospitalRoutes);
-console.log(mongoDBUrl)
-mongoose
-  .connect(mongoDBUrl)
-  .then(() => {
-    console.log('App connected to database');
-  })
-  .catch((error) => {
-    console.log(error);
-  });
+const PORT = process.env.PORT || 5000
 
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`App is listening to port: ${PORT}`);
-  });
-}
-
-export default app;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
+})
