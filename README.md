@@ -1,16 +1,17 @@
-# Medical Referral Appointment System API
+# Medical Referral Appointment System 
 
-This is the backend API for the **Medical Referral Appointment System**, built with Node.js, Express, and MongoDB.
+This is the FullStack app for the **Medical Referral Appointment System**, built with React, Node.js, Express, and MongoDB.
 
 ## 🔗 Project Links
 
-- **LIVEWEBSITE:** [GitHub - MRAS (MERN)](https://mras-final-year-dbyk.vercel.app/)
+- **LIVEWEBSITE:** [VERCEL - MRAS (MERN)](https://mras-final-year-dbyk.vercel.app/)
 - **Postman Collection:** [medical_referral_api.postman_collection.json](./medical_referral_api.postman_collection.json)
 
 ---
 
 ## 🛠️ Technologies Used
 
+- React.js
 - Node.js
 - Express.js
 - MongoDB + Mongoose
@@ -62,6 +63,9 @@ The server will start on http://localhost:8000.
 9. npm run dev
 
 The frontend will run on http://localhost:5173.
+```
+
+
 
 You can explore and test the API endpoints using the included Postman collection:
 
