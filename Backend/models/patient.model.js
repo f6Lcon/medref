@@ -7,6 +7,11 @@ const patientSchema = mongoose.Schema(
       required: true,
       ref: "User",
     },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     dateOfBirth: {
       type: Date,
       required: true,

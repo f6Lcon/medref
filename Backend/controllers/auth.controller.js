@@ -8,21 +8,32 @@ import Doctor from "../models/doctor.model.js"
 // @route   POST /api/auth/login
 // @access  Public
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body
+  const { email, username, password } = req.body
 
-  const user = await User.findOne({ email })
+  // Allow login with either email or username
+  let user
+
+  if (email) {
+    user = await User.findOne({ email })
+  } else if (username) {
+    user = await User.findOne({ username })
+  } else {
+    res.status(400)
+    throw new Error("Please provide email or username")
+  }
 
   if (user && (await user.matchPassword(password))) {
     res.json({
       _id: user._id,
       name: user.name,
+      username: user.username,
       email: user.email,
       role: user.role,
       token: generateToken(user._id),
     })
   } else {
     res.status(401)
-    throw new Error("Invalid email or password")
+    throw new Error("Invalid email/username or password")
   }
 })
 
@@ -30,17 +41,25 @@ const loginUser = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/register
 // @access  Public
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body
+  const { name, username, email, password, role } = req.body
 
-  const userExists = await User.findOne({ email })
-
-  if (userExists) {
+  // Check if email exists
+  const emailExists = await User.findOne({ email })
+  if (emailExists) {
     res.status(400)
-    throw new Error("User already exists")
+    throw new Error("Email already in use")
+  }
+
+  // Check if username exists
+  const usernameExists = await User.findOne({ username })
+  if (usernameExists) {
+    res.status(400)
+    throw new Error("Username already taken")
   }
 
   const user = await User.create({
     name,
+    username,
     email,
     password,
     role,
@@ -50,6 +69,7 @@ const registerUser = asyncHandler(async (req, res) => {
     res.status(201).json({
       _id: user._id,
       name: user.name,
+      username: user.username,
       email: user.email,
       role: user.role,
       token: generateToken(user._id),
@@ -70,6 +90,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
     const profileData = {
       _id: user._id,
       name: user.name,
+      username: user.username,
       email: user.email,
       role: user.role,
     }
@@ -107,6 +128,17 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     user.name = req.body.name || user.name
     user.email = req.body.email || user.email
 
+    // Only update username if provided
+    if (req.body.username) {
+      // Check if username is already taken
+      const usernameExists = await User.findOne({ username: req.body.username })
+      if (usernameExists && usernameExists._id.toString() !== user._id.toString()) {
+        res.status(400)
+        throw new Error("Username already taken")
+      }
+      user.username = req.body.username
+    }
+
     if (req.body.password) {
       user.password = req.body.password
     }
@@ -116,6 +148,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     res.json({
       _id: updatedUser._id,
       name: updatedUser.name,
+      username: updatedUser.username,
       email: updatedUser.email,
       role: updatedUser.role,
       token: generateToken(updatedUser._id),

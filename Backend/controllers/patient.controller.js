@@ -1,11 +1,13 @@
 import asyncHandler from "express-async-handler"
 import Patient from "../models/patient.model.js"
+import User from "../models/user.model.js"
 
 // @desc    Create a patient profile
 // @route   POST /api/patients
 // @access  Private
 const createPatient = asyncHandler(async (req, res) => {
   const {
+    email,
     dateOfBirth,
     gender,
     address,
@@ -25,8 +27,16 @@ const createPatient = asyncHandler(async (req, res) => {
     throw new Error("Patient profile already exists")
   }
 
+  // Verify email matches the authenticated user's email
+  const user = await User.findById(req.user._id)
+  if (!user || user.email !== email) {
+    res.status(400)
+    throw new Error("Email does not match authenticated user")
+  }
+
   const patient = await Patient.create({
     user: req.user._id,
+    email, // Include email from request
     dateOfBirth,
     gender,
     address,

@@ -7,6 +7,11 @@ const doctorSchema = mongoose.Schema(
       required: true,
       ref: "User",
     },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     specialization: {
       type: String,
       required: true,
