@@ -16,10 +16,8 @@ const Header = () => {
     const navItems = [
         { title: 'Home', path: '/' },
         { title: 'Appointments', path: '/appointments' },
-        { title: 'Patients', path: '/patients' },
         { title: 'Doctors', path: '/doctors' },
-        { title: 'Hospitals', path: '/hospitals'},
-        { title: 'Referrals', path: '/referrals'},
+        { title: 'Dashboard', path: '/patient-dashboard'}
 
     ];
 
