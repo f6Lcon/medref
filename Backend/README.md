@@ -88,4 +88,145 @@ This is the backend API documentation for the Medical Referral Appointment Syste
 
 ---
 
-Feel free to expand this README with environment setup, testing instructions, or usage examples!
+# 📚 Medical Referral Appointment System - API Documentation
+
+This API serves the backend of the **Medical Referral Appointment System**, supporting patient referrals, hospital management, doctor scheduling, and user authentication.
+
+---
+
+## 🔑 Authentication
+
+All protected routes require a **Bearer Token** (JWT) in the `Authorization` header.
+
+**Header Example:**
+
+---
+
+## 🚀 Base URL
+
+
+---
+
+## 📦 Postman Collection
+
+- Import the Postman collection file `medical-referral.postman_collection.json` from the `/docs` folder *(you can generate this from Postman > Export)*.
+- Make sure to set the correct environment for base URL and tokens.
+
+---
+
+## 📂 API Endpoints
+
+### 🔐 Auth Endpoints
+
+| Method | Endpoint         | Description               | Access     |
+|--------|------------------|---------------------------|------------|
+| POST   | /auth/login      | Log in a user             | Public     |
+| POST   | /auth/register   | Register a new user       | Public     |
+| GET    | /auth/profile    | Get user profile          | Private    |
+| PUT    | /auth/profile    | Update user profile       | Private    |
+
+---
+
+### 🧑‍🤝‍🧑 Patient Endpoints
+
+| Method | Endpoint              | Description                      | Access          |
+|--------|-----------------------|----------------------------------|-----------------|
+| POST   | /patients             | Create patient profile           | Private         |
+| GET    | /patients             | Get all patients                 | Doctor/Admin    |
+| GET    | /patients/profile     | Get current patient’s profile    | Private         |
+| PUT    | /patients/profile     | Update patient’s profile         | Private         |
+| GET    | /patients/:id         | Get patient by ID                | Doctor/Admin    |
+
+---
+
+### 🩺 Doctor Endpoints
+
+| Method | Endpoint                               | Description                          | Access     |
+|--------|----------------------------------------|--------------------------------------|------------|
+| POST   | /doctors                               | Create doctor profile                | Private    |
+| GET    | /doctors                               | Get all doctors                      | Public     |
+| GET    | /doctors/profile                       | Get current doctor profile           | Private    |
+| PUT    | /doctors/profile                       | Update current doctor profile        | Private    |
+| GET    | /doctors/specialization/:spec          | Get doctors by specialization        | Public     |
+| GET    | /doctors/hospital/:hospitalId          | Get doctors by hospital              | Public     |
+| GET    | /doctors/:id                           | Get doctor by ID                     | Public     |
+
+---
+
+### 🏥 Hospital Endpoints
+
+| Method | Endpoint            | Description                   | Access        |
+|--------|---------------------|-------------------------------|---------------|
+| POST   | /hospitals          | Create hospital               | Admin         |
+| GET    | /hospitals          | Get all hospitals             | Public        |
+| GET    | /hospitals/search   | Search hospitals by name/location | Public    |
+| GET    | /hospitals/:id      | Get hospital by ID            | Public        |
+| PUT    | /hospitals/:id      | Update hospital               | Admin         |
+| DELETE | /hospitals/:id      | Delete hospital               | Admin         |
+
+---
+
+### 📅 Appointment Endpoints
+
+| Method | Endpoint                        | Description                              | Access               |
+|--------|----------------------------------|------------------------------------------|----------------------|
+| POST   | /appointments                    | Create a new appointment                 | Private              |
+| GET    | /appointments/patient           | Get patient appointments                 | Private              |
+| GET    | /appointments/doctor            | Get doctor appointments                  | Doctor               |
+| GET    | /appointments/:id               | Get appointment by ID                    | Patient/Doctor/Admin |
+| PUT    | /appointments/:id/status        | Update appointment status                | Doctor               |
+| PUT    | /appointments/:id/cancel        | Cancel an appointment                    | Patient/Doctor       |
+
+---
+
+### 📤 Referral Endpoints
+
+| Method | Endpoint                          | Description                                   | Access        |
+|--------|-----------------------------------|-----------------------------------------------|---------------|
+| POST   | /referrals                        | Create a new referral                         | Doctor        |
+| GET    | /referrals/patient                | Get referrals for patient                     | Patient       |
+| GET    | /referrals/referring              | Get referrals made by current doctor          | Doctor        |
+| GET    | /referrals/referred               | Get referrals sent to current doctor          | Doctor        |
+| GET    | /referrals/:id                    | Get referral by ID                            | Patient/Doctor|
+| PUT    | /referrals/:id/status             | Update referral status                        | Doctor        |
+| POST   | /referrals/:id/appointment        | Create appointment from referral              | Doctor        |
+
+---
+
+## 📘 Example Usage (Frontend Devs)
+
+### Login Request
+```js
+fetch('/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password }),
+});
+```js
+fetch('/api/auth/profile', {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+});
+
+```
+
+`
+✅ Status Codes
+
+    200 OK – Successful request
+
+    201 Created – Resource created
+
+    400 Bad Request – Invalid input
+
+    401 Unauthorized – Missing or invalid token
+
+    403 Forbidden – Access denied
+
+    404 Not Found – Resource not found
+
+    500 Internal Server Error – Server issue
+
+
+`
