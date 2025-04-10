@@ -1,27 +1,30 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Header from "./components/Header";
-import Home from "./components/Home";
-import Appointments from "./components/Appointments";
-import Patients from "./components/Patients";
-import Doctors from "./components/Doctors";
-import DoctorProfile from "./components/DoctorProfile";
-import Admin from "./components/Admin";
-import Footer from "./components/Footer";
-import NotFound from "./components/NotFound";
-import ScrollToTopButton from "./components/ScrollToTopButton";
-import ScrollToTop from "./components/ScrollToTop";
-import AboutUs from "./pages/AboutUs";
-import Services from "./pages/Services";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import ContactUs from "./pages/ContactUs";
-import SignUp from "./components/SignUp";
-import Login from "./components/Login";
-import { useState } from "react";
-import LoginContext from "./context/LoginContext";
-import Hospitals from "./components/Hospitals";
-import PatientDashboard from "./components/PatientDashboard";
-import DoctorDashboard from "./components/DoctorDashboard";
+"use client"
+
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
+import { useState, useEffect } from "react"
+import Header from "./components/Header"
+import Home from "./components/Home"
+import Appointments from "./components/Appointments"
+import Patients from "./components/Patients"
+import Doctors from "./components/Doctors"
+import DoctorProfile from "./components/DoctorProfile"
+import Admin from "./components/Admin"
+import Footer from "./components/Footer"
+import NotFound from "./components/NotFound"
+import ScrollToTopButton from "./components/ScrollToTopButton"
+import ScrollToTop from "./components/ScrollToTop"
+import AboutUs from "./pages/AboutUs"
+import Services from "./pages/Services"
+import PrivacyPolicy from "./pages/PrivacyPolicy"
+import TermsOfService from "./pages/TermsOfService"
+import ContactUs from "./pages/ContactUs"
+import SignUp from "./components/SignUp"
+import Login from "./components/Login"
+import LoginContext from "./context/LoginContext"
+import Hospitals from "./components/Hospitals"
+import PatientDashboard from "./components/PatientDashboard"
+import DoctorDashboard from "./components/DoctorDashboard"
+import AdminDashboard from "./components/AdminDashboard"
 
 function App() {
   const [doctors, setDoctors] = useState([
@@ -124,12 +127,60 @@ function App() {
       image: "https://randomuser.me/api/portraits/men/18.jpg",
       bio: "Dr. Reginald Bennett is an experienced general practitioner providing comprehensive primary care and preventive medicine for patients of all ages.",
     },
-  ]);
+  ])
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userRole, setUserRole] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem("token")
+
+    if (token) {
+      // Fetch user data to determine role
+      fetch("http://localhost:5000/api/auth/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error("Invalid token")
+          }
+          return res.json()
+        })
+        .then((data) => {
+          setUserRole(data.role)
+          setIsLoggedIn(true)
+        })
+        .catch((err) => {
+          console.error("Error fetching user data:", err)
+          localStorage.removeItem("token")
+          setIsLoggedIn(false)
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    } else {
+      setLoading(false)
+      setIsLoggedIn(false)
+    }
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-light flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <LoginContext.Provider value={{ isLoggedIn, setIsLoggedIn }}>
+    <LoginContext.Provider value={{ isLoggedIn, setIsLoggedIn, userRole, setUserRole }}>
       <Router>
         <ScrollToTop />
         <div className="bg-light min-h-screen font-sans text-primary">
@@ -140,17 +191,31 @@ function App() {
               <Route path="/appointments" element={<Appointments />} />
               <Route path="/patients" element={<Patients />} />
               <Route path="/doctors" element={<Doctors doctors={doctors} />} />
-              <Route
-                path="/doctor/:id"
-                element={<DoctorProfile doctors={doctors} />}
-              />
-              
+              <Route path="/doctor/:id" element={<DoctorProfile doctors={doctors} />} />
+
               <Route path="/hospitals" element={<Hospitals />} />
-              <Route path="/patient-dashboard" element={<PatientDashboard />} />
-              <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+
+              {/* Protected routes with role-based access */}
+              <Route
+                path="/patient-dashboard/*"
+                element={isLoggedIn && userRole === "patient" ? <PatientDashboard /> : <Navigate to="/login" replace />}
+              />
+
+              <Route
+                path="/doctor-dashboard/*"
+                element={isLoggedIn && userRole === "doctor" ? <DoctorDashboard /> : <Navigate to="/login" replace />}
+              />
+
+              <Route
+                path="/admin-dashboard/*"
+                element={isLoggedIn && userRole === "admin" ? <AdminDashboard /> : <Navigate to="/login" replace />}
+              />
 
               <Route path="/home" element={<Home />} />
-              <Route path="/admin" element={<Admin />} />
+              <Route
+                path="/admin"
+                element={isLoggedIn && userRole === "admin" ? <Admin /> : <Navigate to="/login" replace />}
+              />
               <Route path="/about-us" element={<AboutUs />} />
               <Route path="/services" element={<Services />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -166,7 +231,7 @@ function App() {
         </div>
       </Router>
     </LoginContext.Provider>
-  );
+  )
 }
 
-export default App;
+export default App

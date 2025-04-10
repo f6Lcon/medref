@@ -8,6 +8,7 @@ import doctorRoutes from "./routes/doctor.routes.js"
 import hospitalRoutes from "./routes/hospital.routes.js"
 import appointmentRoutes from "./routes/appointment.routes.js"
 import referralRoutes from "./routes/referral.routes.js"
+import adminRoutes from "./routes/admin.route.js"
 import { notFound, errorHandler } from "./middleware/error.middleware.js"
 
 dotenv.config()
@@ -28,6 +29,7 @@ app.use("/api/doctors", doctorRoutes)
 app.use("/api/hospitals", hospitalRoutes)
 app.use("/api/appointments", appointmentRoutes)
 app.use("/api/referrals", referralRoutes)
+app.use("/api/admins", adminRoutes)
 
 // Error handling middleware
 app.use(notFound)

@@ -57,6 +57,12 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Username already taken")
   }
 
+  // Validate role
+  if (role && !["patient", "doctor", "admin"].includes(role)) {
+    res.status(400)
+    throw new Error("Invalid role specified")
+  }
+
   const user = await User.create({
     name,
     username,

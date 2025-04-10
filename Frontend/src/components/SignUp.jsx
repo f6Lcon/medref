@@ -26,7 +26,9 @@ const SignUp = () => {
     // Doctor specific fields
     licenseNumber: "",
     specialization: "",
-    file: null,
+    // Admin specific fields
+    adminCode: "",
+    department: "",
   })
 
   const [loading, setLoading] = useState(false)
@@ -78,7 +80,7 @@ const SignUp = () => {
         email: formData.email,
         username: formData.username,
         password: formData.password,
-        role: formData.role === "doctor" ? "doctor" : "patient",
+        role: formData.role === "doctor" ? "doctor" : formData.role === "admin" ? "admin" : "patient",
       }
 
       const response = await axios.post("http://localhost:5000/api/auth/register", userData, {
@@ -115,20 +117,34 @@ const SignUp = () => {
           },
         })
 
-        // If there's a file, upload it (this would need a separate endpoint for file uploads)
-        if (formData.file) {
-          const fileFormData = new FormData()
-          fileFormData.append("file", formData.file)
-
-          await axios.post("http://localhost:5000/api/doctors/upload-documents", fileFormData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${token}`,
-            },
-          })
+        navigate("/doctor-dashboard")
+      } else if (formData.role === "admin") {
+        // Verify admin code (in a real app, this would be validated on the server)
+        if (formData.adminCode !== "ADMIN123") {
+          // Replace with your actual admin code verification
+          setError("Invalid administrator code")
+          setLoading(false)
+          return
         }
 
-        navigate("/doctor-dashboard")
+        // Create admin profile
+        const adminData = {
+          department: formData.department,
+          email: formData.email, // Explicitly include email
+          contactInfo: {
+            phone: formData.phoneNumber,
+            email: formData.email,
+          },
+        }
+
+        await axios.post("http://localhost:5000/api/admins", adminData, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        navigate("/admin-dashboard")
       } else {
         // Create patient profile with complete address and email
         const patientData = {
@@ -183,13 +199,24 @@ const SignUp = () => {
             <div className="text-xs text-gray-500">Account</div>
             <div className="text-xs text-gray-500">Personal Info</div>
             {formData.role === "doctor" && <div className="text-xs text-gray-500">Professional</div>}
+            {formData.role === "admin" && <div className="text-xs text-gray-500">Admin</div>}
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1">
             <div
               className="bg-accent h-2.5 rounded-full transition-all duration-300"
               style={{
                 width:
-                  step === 1 ? "33%" : step === 2 && formData.role !== "doctor" ? "100%" : step === 2 ? "66%" : "100%",
+                  step === 1
+                    ? "33%"
+                    : step === 2 && formData.role !== "doctor" && formData.role !== "admin"
+                      ? "100%"
+                      : step === 2
+                        ? "66%"
+                        : step === 3 && formData.role === "doctor"
+                          ? "100%"
+                          : step === 3 && formData.role === "admin"
+                            ? "100%"
+                            : "100%",
               }}
             ></div>
           </div>
@@ -271,7 +298,7 @@ const SignUp = () => {
                     value={formData.password}
                     onChange={handleChange}
                     className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                    placeholder="••••••••"
+                    placeholder="•��••••••"
                     required
                   />
                 </div>
@@ -296,6 +323,7 @@ const SignUp = () => {
                     </option>
                     <option value="doctor">Doctor</option>
                     <option value="patient">Patient</option>
+                    <option value="admin">Administrator</option>
                   </select>
                 </div>
               </div>
@@ -389,7 +417,7 @@ const SignUp = () => {
                         value={formData.street}
                         onChange={handleChange}
                         className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="1957 Karu Main"
+                        placeholder="123 Main St"
                         required
                       />
                     </div>
@@ -407,7 +435,7 @@ const SignUp = () => {
                         value={formData.city}
                         onChange={handleChange}
                         className="pl-4 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="Nakuru"
+                        placeholder="New York"
                         required
                       />
                     </div>
@@ -422,7 +450,7 @@ const SignUp = () => {
                         value={formData.state}
                         onChange={handleChange}
                         className="pl-4 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="Central"
+                        placeholder="NY"
                         required
                       />
                     </div>
@@ -455,7 +483,7 @@ const SignUp = () => {
                         value={formData.country}
                         onChange={handleChange}
                         className="pl-4 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="Kenya"
+                        placeholder="United States"
                         required
                       />
                     </div>
@@ -471,7 +499,7 @@ const SignUp = () => {
                 >
                   Back
                 </button>
-                {formData.role === "doctor" ? (
+                {formData.role === "doctor" || formData.role === "admin" ? (
                   <button
                     type="button"
                     onClick={nextStep}
@@ -526,21 +554,58 @@ const SignUp = () => {
                 />
               </div>
 
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="w-1/2 bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-md hover:bg-gray-300 transition duration-300"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 bg-accent text-primary font-bold py-2 px-4 rounded-md hover:bg-primary hover:text-accent transition duration-300 disabled:opacity-50"
+                  disabled={loading}
+                >
+                  {loading ? "Signing Up..." : "Sign Up"}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 3 && formData.role === "admin" && (
+            <>
               <div>
-                <label htmlFor="file" className="block text-sm font-medium text-gray-700 mb-1">
-                  Upload Credentials (PDF)
+                <label htmlFor="adminCode" className="block text-sm font-medium text-gray-700 mb-1">
+                  Administrator Code
                 </label>
                 <input
-                  type="file"
-                  id="file"
-                  name="file"
-                  accept="application/pdf"
+                  type="text"
+                  id="adminCode"
+                  name="adminCode"
+                  value={formData.adminCode}
                   onChange={handleChange}
-                  className="border border-gray-300 rounded-md py-2 px-4 w-full focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="pl-4 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
+                  placeholder="Enter administrator verification code"
+                  required
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Upload your medical credentials, certifications, or licenses
-                </p>
+                <p className="text-xs text-gray-500 mt-1">This code is required to create an administrator account</p>
+              </div>
+
+              <div>
+                <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
+                  Department
+                </label>
+                <input
+                  type="text"
+                  id="department"
+                  name="department"
+                  value={formData.department}
+                  onChange={handleChange}
+                  className="pl-4 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
+                  placeholder="e.g., IT, Management, Operations"
+                  required
+                />
               </div>
 
               <div className="flex space-x-3">
