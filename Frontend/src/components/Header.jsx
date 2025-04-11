@@ -50,9 +50,6 @@ const Header = () => {
       return [
         ...commonItems,
         { title: "Dashboard", path: "/doctor-dashboard" },
-        { title: "Appointments", path: "/appointments" },
-        { title: "Patients", path: "/patients" },
-        { title: "Referrals", path: "/referrals" },
       ]
     }
 
