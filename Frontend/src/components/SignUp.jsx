@@ -83,6 +83,8 @@ const SignUp = () => {
         role: formData.role === "doctor" ? "doctor" : formData.role === "admin" ? "admin" : "patient",
       }
 
+      console.log("Registering user with data:", userData)
+
       const response = await axios.post("http://localhost:5000/api/auth/register", userData, {
         headers: {
           "Content-Type": "application/json",
@@ -96,6 +98,7 @@ const SignUp = () => {
 
       // Store token in localStorage
       localStorage.setItem("token", token)
+      localStorage.setItem("userRole", response.data.role)
 
       // Step 2: Create profile based on role
       if (formData.role === "doctor") {
@@ -110,6 +113,8 @@ const SignUp = () => {
           },
         }
 
+        console.log("Creating doctor profile with data:", doctorData)
+
         await axios.post("http://localhost:5000/api/doctors", doctorData, {
           headers: {
             "Content-Type": "application/json",
@@ -117,7 +122,8 @@ const SignUp = () => {
           },
         })
 
-        navigate("/doctor-dashboard")
+        // Redirect to doctor dashboard
+        window.location.href = "/doctor-dashboard"
       } else if (formData.role === "admin") {
         // Verify admin code (in a real app, this would be validated on the server)
         if (formData.adminCode !== "ADMIN123") {
@@ -137,6 +143,8 @@ const SignUp = () => {
           },
         }
 
+        console.log("Creating admin profile with data:", adminData)
+
         await axios.post("http://localhost:5000/api/admins", adminData, {
           headers: {
             "Content-Type": "application/json",
@@ -144,7 +152,8 @@ const SignUp = () => {
           },
         })
 
-        navigate("/admin-dashboard")
+        // Redirect to admin dashboard
+        window.location.href = "/admin-dashboard"
       } else {
         // Create patient profile with complete address and email
         const patientData = {
@@ -161,6 +170,8 @@ const SignUp = () => {
           },
         }
 
+        console.log("Creating patient profile with data:", patientData)
+
         await axios.post("http://localhost:5000/api/patients", patientData, {
           headers: {
             "Content-Type": "application/json",
@@ -168,7 +179,8 @@ const SignUp = () => {
           },
         })
 
-        navigate("/patient-dashboard")
+        // Redirect to patient dashboard
+        window.location.href = "/patient-dashboard"
       }
 
       alert("Registration successful!")
@@ -298,7 +310,7 @@ const SignUp = () => {
                     value={formData.password}
                     onChange={handleChange}
                     className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                    placeholder="•��••••••"
+                    placeholder="••••••••"
                     required
                   />
                 </div>

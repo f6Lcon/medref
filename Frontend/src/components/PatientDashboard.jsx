@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useContext } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import {
@@ -16,6 +16,14 @@ import {
   FaFileMedical,
   FaUserMd,
 } from "react-icons/fa"
+import LoginContext from "../context/LoginContext"
+import BookAppointmentForm from "./BookAppointmentForm"
+import HospitalSearch from "./HospitalSearch"
+import DoctorSearch from "./DoctorSearch"
+import MedicalRecordUpload from "./MedicalRecordUpload"
+import MedicalRecordsList from "./MedicalRecordsList"
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
 const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview")
@@ -24,7 +32,10 @@ const PatientDashboard = () => {
   const [referrals, setReferrals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [selectedDoctor, setSelectedDoctor] = useState(null)
+  const [selectedHospital, setSelectedHospital] = useState(null)
   const navigate = useNavigate()
+  const { setIsLoggedIn, setUserRole } = useContext(LoginContext)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,21 +48,21 @@ const PatientDashboard = () => {
       try {
         setLoading(true)
         // Fetch user profile data
-        const userResponse = await axios.get("http://localhost:5000/api/auth/profile", {
+        const userResponse = await axios.get(`${API_URL}/api/auth/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         })
 
         setUserData(userResponse.data)
 
         // Fetch appointments
-        const appointmentsResponse = await axios.get("http://localhost:5000/api/appointments/patient", {
+        const appointmentsResponse = await axios.get(`${API_URL}/api/appointments/patient`, {
           headers: { Authorization: `Bearer ${token}` },
         })
 
         setAppointments(appointmentsResponse.data)
 
         // Fetch referrals
-        const referralsResponse = await axios.get("http://localhost:5000/api/referrals/patient", {
+        const referralsResponse = await axios.get(`${API_URL}/api/referrals/patient`, {
           headers: { Authorization: `Bearer ${token}` },
         })
 
@@ -61,6 +72,9 @@ const PatientDashboard = () => {
         setError("Failed to load dashboard data. Please try again.")
         if (err.response?.status === 401) {
           localStorage.removeItem("token")
+          localStorage.removeItem("userRole")
+          setIsLoggedIn(false)
+          setUserRole(null)
           navigate("/login")
         }
       } finally {
@@ -69,16 +83,30 @@ const PatientDashboard = () => {
     }
 
     fetchData()
-  }, [navigate])
+  }, [navigate, setIsLoggedIn, setUserRole])
 
   const handleLogout = () => {
     localStorage.removeItem("token")
+    localStorage.removeItem("userRole")
+    setIsLoggedIn(false)
+    setUserRole(null)
     navigate("/login")
   }
 
   const formatDate = (dateString) => {
     const options = { year: "numeric", month: "long", day: "numeric" }
     return new Date(dateString).toLocaleDateString(undefined, options)
+  }
+
+  const handleAppointmentSuccess = (newAppointment) => {
+    setAppointments([newAppointment, ...appointments])
+    setActiveTab("appointments")
+  }
+
+  const handleMedicalRecordSuccess = (newRecord) => {
+    // You would typically refresh the medical records list here
+    // For now, we'll just show a success message
+    alert("Medical record uploaded successfully!")
   }
 
   if (loading) {
@@ -504,75 +532,14 @@ const PatientDashboard = () => {
           </div>
         )}
 
+        {/* Main Content */}
         {activeTab === "appointments" && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Schedule New Appointment</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="doctor" className="block text-sm font-medium text-gray-700 mb-1">
-                    Select Doctor
-                  </label>
-                  <select
-                    id="doctor"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-accent"
-                  >
-                    <option value="">Select a doctor</option>
-                    {/* Populate with doctors from API */}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="hospital" className="block text-sm font-medium text-gray-700 mb-1">
-                    Select Hospital
-                  </label>
-                  <select
-                    id="hospital"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-accent"
-                  >
-                    <option value="">Select a hospital</option>
-                    {/* Populate with hospitals from API */}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
-                    Appointment Date
-                  </label>
-                  <input
-                    type="date"
-                    id="date"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-accent"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">
-                    Appointment Time
-                  </label>
-                  <input
-                    type="time"
-                    id="time"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-accent"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-1">
-                    Reason for Visit
-                  </label>
-                  <textarea
-                    id="reason"
-                    rows={3}
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-accent"
-                    placeholder="Please describe your symptoms or reason for the appointment"
-                  ></textarea>
-                </div>
-                <div className="md:col-span-2">
-                  <button className="bg-accent text-white py-2 px-4 rounded-md hover:bg-primary hover:text-accent transition">
-                    Schedule Appointment
-                  </button>
-                </div>
-              </div>
-            </div>
+            <BookAppointmentForm
+              onSuccess={handleAppointmentSuccess}
+              selectedDoctor={selectedDoctor}
+              selectedHospital={selectedHospital}
+            />
 
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold text-gray-800 mb-6">Your Appointments</h2>
@@ -776,6 +743,35 @@ const PatientDashboard = () => {
             ) : (
               <p className="text-gray-500">No referrals found.</p>
             )}
+          </div>
+        )}
+
+        {activeTab === "doctors" && (
+          <div className="space-y-6">
+            <DoctorSearch
+              onSelectDoctor={(doctor) => {
+                setSelectedDoctor(doctor)
+                setActiveTab("appointments")
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === "hospitals" && (
+          <div className="space-y-6">
+            <HospitalSearch
+              onSelectHospital={(hospital) => {
+                setSelectedHospital(hospital)
+                setActiveTab("appointments")
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === "records" && (
+          <div className="space-y-6">
+            <MedicalRecordUpload patientId={userData?.patientData?._id} onUploadSuccess={handleMedicalRecordSuccess} />
+            <MedicalRecordsList patientId={userData?.patientData?._id} />
           </div>
         )}
 

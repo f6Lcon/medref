@@ -8,7 +8,7 @@ import doctorRoutes from "./routes/doctor.routes.js"
 import hospitalRoutes from "./routes/hospital.routes.js"
 import appointmentRoutes from "./routes/appointment.routes.js"
 import referralRoutes from "./routes/referral.routes.js"
-import adminRoutes from "./routes/admin.route.js"
+import adminRoutes from "./routes/admin.routes.js"
 import { notFound, errorHandler } from "./middleware/error.middleware.js"
 
 dotenv.config()

@@ -133,9 +133,73 @@ function App() {
   const [userRole, setUserRole] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const [permissions, setPermissions] = useState({
+    canManageHospitals: false,
+    canManageUsers: false,
+    canCreateReferrals: false,
+    canViewReferrals: false,
+    canCreateAppointments: false,
+    canViewAppointments: false,
+    canViewDoctors: false,
+    canBookAppointments: false,
+  })
+
+  useEffect(() => {
+    if (userRole === "admin") {
+      setPermissions({
+        canManageHospitals: true,
+        canManageUsers: true,
+        canCreateReferrals: true,
+        canViewReferrals: true,
+        canCreateAppointments: true,
+        canViewAppointments: true,
+        canViewDoctors: true,
+        canBookAppointments: true,
+      })
+    } else if (userRole === "doctor") {
+      setPermissions({
+        canManageHospitals: false,
+        canManageUsers: false,
+        canCreateReferrals: true,
+        canViewReferrals: true,
+        canCreateAppointments: true,
+        canViewAppointments: true,
+        canViewDoctors: true,
+        canBookAppointments: false,
+      })
+    } else if (userRole === "patient") {
+      setPermissions({
+        canManageHospitals: false,
+        canManageUsers: false,
+        canCreateReferrals: false,
+        canViewReferrals: true,
+        canCreateAppointments: false,
+        canViewAppointments: true,
+        canViewDoctors: true,
+        canBookAppointments: true,
+      })
+    } else {
+      setPermissions({
+        canManageHospitals: false,
+        canManageUsers: false,
+        canCreateReferrals: false,
+        canViewReferrals: false,
+        canCreateAppointments: false,
+        canViewAppointments: false,
+        canViewDoctors: true,
+        canBookAppointments: false,
+      })
+    }
+  }, [userRole])
+
+  const checkPermission = (permission) => {
+    return permissions[permission] === true
+  }
+
   useEffect(() => {
     // Check if user is logged in
     const token = localStorage.getItem("token")
+    const storedRole = localStorage.getItem("userRole")
 
     if (token) {
       // Fetch user data to determine role
@@ -153,11 +217,17 @@ function App() {
         .then((data) => {
           setUserRole(data.role)
           setIsLoggedIn(true)
+          // Update stored role if it's different
+          if (storedRole !== data.role) {
+            localStorage.setItem("userRole", data.role)
+          }
         })
         .catch((err) => {
           console.error("Error fetching user data:", err)
           localStorage.removeItem("token")
+          localStorage.removeItem("userRole")
           setIsLoggedIn(false)
+          setUserRole(null)
         })
         .finally(() => {
           setLoading(false)
@@ -165,6 +235,8 @@ function App() {
     } else {
       setLoading(false)
       setIsLoggedIn(false)
+      setUserRole(null)
+      localStorage.removeItem("userRole")
     }
   }, [])
 
@@ -180,7 +252,16 @@ function App() {
   }
 
   return (
-    <LoginContext.Provider value={{ isLoggedIn, setIsLoggedIn, userRole, setUserRole }}>
+    <LoginContext.Provider
+      value={{
+        isLoggedIn,
+        setIsLoggedIn,
+        userRole,
+        setUserRole,
+        permissions,
+        checkPermission,
+      }}
+    >
       <Router>
         <ScrollToTop />
         <div className="bg-light min-h-screen font-sans text-primary">
@@ -189,7 +270,16 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/appointments" element={<Appointments />} />
-              <Route path="/patients" element={<Patients />} />
+              <Route
+                path="/patients"
+                element={
+                  isLoggedIn && (userRole === "doctor" || userRole === "admin") ? (
+                    <Patients />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
               <Route path="/doctors" element={<Doctors doctors={doctors} />} />
               <Route path="/doctor/:id" element={<DoctorProfile doctors={doctors} />} />
 

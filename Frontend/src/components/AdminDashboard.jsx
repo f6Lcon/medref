@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useContext } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import {
@@ -17,8 +17,15 @@ import {
   FaChartLine,
   FaDatabase,
   FaUserShield,
-  FaExchangeAlt, // Added FaExchangeAlt import
+  FaExchangeAlt,
+  FaPlus,
+  FaEdit,
+  FaTrash,
 } from "react-icons/fa"
+import LoginContext from "../context/LoginContext"
+import AddHospitalForm from "./AddHospitalForm"
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview")
@@ -30,9 +37,14 @@ const AdminDashboard = () => {
     totalReferrals: 0,
     totalHospitals: 0,
   })
+  const [users, setUsers] = useState([])
+  const [doctors, setDoctors] = useState([])
+  const [patients, setPatients] = useState([])
+  const [hospitals, setHospitals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const navigate = useNavigate()
+  const { setIsLoggedIn, setUserRole } = useContext(LoginContext)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,27 +57,50 @@ const AdminDashboard = () => {
       try {
         setLoading(true)
         // Fetch user profile data
-        const userResponse = await axios.get("http://localhost:5000/api/auth/profile", {
+        const userResponse = await axios.get(`${API_URL}/api/auth/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         })
 
         setUserData(userResponse.data)
 
-        // Fetch system statistics
-        // In a real application, you would have an endpoint for these statistics
-        // For now, we'll simulate this data
+        // Fetch system statistics and data
+        // In a real application, you would have endpoints for these
+        // For now, we'll make multiple requests to simulate this
+
+        // Fetch doctors
+        const doctorsResponse = await axios.get(`${API_URL}/api/doctors`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setDoctors(doctorsResponse.data)
+
+        // Fetch patients
+        const patientsResponse = await axios.get(`${API_URL}/api/patients`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setPatients(patientsResponse.data)
+
+        // Fetch hospitals
+        const hospitalsResponse = await axios.get(`${API_URL}/api/hospitals`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setHospitals(hospitalsResponse.data)
+
+        // Set statistics
         setStats({
-          totalPatients: 1250,
-          totalDoctors: 85,
-          totalAppointments: 3750,
-          totalReferrals: 620,
-          totalHospitals: 12,
+          totalPatients: patientsResponse.data.length,
+          totalDoctors: doctorsResponse.data.length,
+          totalAppointments: 3750, // Placeholder
+          totalReferrals: 620, // Placeholder
+          totalHospitals: hospitalsResponse.data.length,
         })
       } catch (err) {
         console.error("Error fetching data:", err)
-        setError("Failed to load dashboard data. Please try again.")
+        setError("Failed to load dashboard data.  Please try again.")
         if (err.response?.status === 401) {
           localStorage.removeItem("token")
+          localStorage.removeItem("userRole")
+          setIsLoggedIn(false)
+          setUserRole(null)
           navigate("/login")
         }
       } finally {
@@ -74,11 +109,19 @@ const AdminDashboard = () => {
     }
 
     fetchData()
-  }, [navigate])
+  }, [navigate, setIsLoggedIn, setUserRole])
 
   const handleLogout = () => {
     localStorage.removeItem("token")
+    localStorage.removeItem("userRole")
+    setIsLoggedIn(false)
+    setUserRole(null)
     navigate("/login")
+  }
+
+  const formatDate = (dateString) => {
+    const options = { year: "numeric", month: "long", day: "numeric" }
+    return new Date(dateString).toLocaleDateString(undefined, options)
   }
 
   if (loading) {
@@ -456,70 +499,328 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Other tabs would be implemented similarly */}
-        {activeTab === "users" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">User Management</h2>
-            <p className="text-gray-500">This section allows you to manage all system users.</p>
-            {/* User management interface would go here */}
-          </div>
-        )}
-
-        {activeTab === "doctors" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Doctor Management</h2>
-            <p className="text-gray-500">This section allows you to manage all doctors in the system.</p>
-            {/* Doctor management interface would go here */}
-          </div>
-        )}
-
-        {activeTab === "patients" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Patient Management</h2>
-            <p className="text-gray-500">This section allows you to manage all patients in the system.</p>
-            {/* Patient management interface would go here */}
-          </div>
-        )}
-
-        {activeTab === "appointments" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Appointment Management</h2>
-            <p className="text-gray-500">This section allows you to manage all appointments in the system.</p>
-            {/* Appointment management interface would go here */}
-          </div>
-        )}
-
+        {/* Hospital Management Tab */}
         {activeTab === "hospitals" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Hospital Management</h2>
-            <p className="text-gray-500">This section allows you to manage all hospitals in the system.</p>
-            {/* Hospital management interface would go here */}
+          <div className="space-y-6">
+            <AddHospitalForm
+              onSuccess={(hospitalData) => {
+                // Add the new hospital to the list
+                setHospitals([hospitalData, ...hospitals])
+              }}
+            />
+
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Hospital Management</h2>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search hospitals..."
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Hospital Name
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Location
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Contact
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Departments
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {hospitals.length > 0 ? (
+                      hospitals.map((hospital) => (
+                        <tr key={hospital._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{hospital.name}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {hospital.address?.city}, {hospital.address?.state}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {hospital.address?.street}, {hospital.address?.zipCode}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{hospital.contactInfo?.email}</div>
+                            <div className="text-sm text-gray-500">{hospital.contactInfo?.phone}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900">
+                              {hospital.departments?.slice(0, 3).join(", ")}
+                              {hospital.departments?.length > 3 && "..."}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button className="text-primary hover:text-accent mr-3">
+                              <FaEdit /> Edit
+                            </button>
+                            <button className="text-red-600 hover:text-red-900">
+                              <FaTrash /> Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                          No hospitals found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
-        {activeTab === "reports" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">System Reports</h2>
-            <p className="text-gray-500">This section provides various system reports and analytics.</p>
-            {/* Reports interface would go here */}
+        {/* Doctor Management Tab */}
+        {activeTab === "doctors" && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Doctor Management</h2>
+                <button className="bg-primary text-white py-2 px-4 rounded-md hover:bg-accent transition flex items-center">
+                  <FaPlus className="mr-2" />
+                  Add New Doctor
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Doctor
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Specialization
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Hospital
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Contact
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {doctors.length > 0 ? (
+                      doctors.map((doctor) => (
+                        <tr key={doctor._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <FaUserMd className="text-gray-500" size={20} />
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  Dr. {doctor.user?.name || "Unknown"}
+                                </div>
+                                <div className="text-sm text-gray-500">{doctor.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{doctor.specialization}</div>
+                            <div className="text-xs text-gray-500">License: {doctor.licenseNumber}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{doctor.hospital?.name || "Not Assigned"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{doctor.contactInfo?.email}</div>
+                            <div className="text-sm text-gray-500">{doctor.contactInfo?.phone}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button className="text-primary hover:text-accent mr-3">
+                              <FaEdit /> Edit
+                            </button>
+                            <button className="text-red-600 hover:text-red-900">
+                              <FaTrash /> Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                          No doctors found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
-        {activeTab === "settings" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">System Settings</h2>
-            <p className="text-gray-500">This section allows you to configure system settings.</p>
-            {/* Settings interface would go here */}
+        {/* Patient Management Tab */}
+        {activeTab === "patients" && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Patient Management</h2>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search patients..."
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Patient
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Demographics
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Contact
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Address
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {patients.length > 0 ? (
+                      patients.map((patient) => (
+                        <tr key={patient._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <FaUserCircle className="text-gray-500" size={20} />
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {patient.user?.name || "Unknown"}
+                                </div>
+                                <div className="text-sm text-gray-500">{patient.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {patient.gender?.charAt(0).toUpperCase() + patient.gender?.slice(1) || "Unknown"}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              DOB: {patient.dateOfBirth ? formatDate(patient.dateOfBirth) : "Unknown"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{patient.email}</div>
+                            <div className="text-sm text-gray-500">{patient.phoneNumber}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {patient.address?.city}, {patient.address?.state}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {patient.address?.street}, {patient.address?.zipCode}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button className="text-primary hover:text-accent mr-3">
+                              <FaEdit /> Edit
+                            </button>
+                            <button className="text-red-600 hover:text-red-900">
+                              <FaTrash /> Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                          No patients found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
-        {activeTab === "database" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Database Management</h2>
-            <p className="text-gray-500">This section provides database management tools.</p>
-            {/* Database management interface would go here */}
-          </div>
-        )}
+        {/* Other tabs would be implemented similarly */}
       </div>
     </div>
   )

@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useContext } from "react"
 import { motion } from "framer-motion"
 import { FaUser, FaLock } from "react-icons/fa"
 import { Link, useNavigate } from "react-router-dom"
 import axios from "axios"
+import LoginContext from "../context/LoginContext"
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +15,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const navigate = useNavigate()
+  const { setIsLoggedIn, setUserRole } = useContext(LoginContext)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -40,22 +42,29 @@ const Login = () => {
         loginData.username = formData.usernameOrEmail
       }
 
+      console.log("Attempting login with:", loginData)
+
       const response = await axios.post("http://localhost:5000/api/auth/login", loginData)
 
       console.log("Login successful:", response.data)
 
-      // Store token in localStorage
+      // Store token and user role in localStorage
       localStorage.setItem("token", response.data.token)
+      localStorage.setItem("userRole", response.data.role)
+
+      // Update context
+      setIsLoggedIn(true)
+      setUserRole(response.data.role)
 
       // Redirect based on user role
       if (response.data.role === "doctor") {
-        navigate("/doctor-dashboard")
+        window.location.href = "/doctor-dashboard"
       } else if (response.data.role === "patient") {
-        navigate("/patient-dashboard")
+        window.location.href = "/patient-dashboard"
       } else if (response.data.role === "admin") {
-        navigate("/admin-dashboard")
+        window.location.href = "/admin-dashboard"
       } else {
-        navigate("/")
+        window.location.href = "/"
       }
     } catch (error) {
       console.error("Login error:", error.response?.data || error.message)
