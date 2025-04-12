@@ -61,12 +61,17 @@ const PatientDashboard = () => {
 
         setAppointments(appointmentsResponse.data)
 
-        // Fetch referrals
-        const referralsResponse = await axios.get(`${API_URL}/api/referrals/patient`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-
-        setReferrals(referralsResponse.data)
+        // Fetch referrals with better error handling
+        try {
+          const referralsResponse = await axios.get(`${API_URL}/api/referrals/patient`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          console.log("Patient referrals:", referralsResponse.data)
+          setReferrals(referralsResponse.data)
+        } catch (refErr) {
+          console.error("Error fetching referrals:", refErr)
+          setError("Failed to load referrals. Please try again.")
+        }
       } catch (err) {
         console.error("Error fetching data:", err)
         setError("Failed to load dashboard data. Please try again.")

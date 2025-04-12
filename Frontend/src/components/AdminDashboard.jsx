@@ -21,9 +21,12 @@ import {
   FaPlus,
   FaEdit,
   FaTrash,
+  FaTimes,
 } from "react-icons/fa"
 import LoginContext from "../context/LoginContext"
 import AddHospitalForm from "./AddHospitalForm"
+import AddDoctorForm from "./AddDoctorForm"
+import ReportGenerator from "./ReportGenerator"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
@@ -41,73 +44,113 @@ const AdminDashboard = () => {
   const [doctors, setDoctors] = useState([])
   const [patients, setPatients] = useState([])
   const [hospitals, setHospitals] = useState([])
+  const [appointments, setAppointments] = useState([])
+  const [referrals, setReferrals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [showAddDoctorForm, setShowAddDoctorForm] = useState(false)
   const navigate = useNavigate()
   const { setIsLoggedIn, setUserRole } = useContext(LoginContext)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        navigate("/login")
-        return
-      }
+  const fetchData = async () => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      navigate("/login")
+      return
+    }
 
+    try {
+      setLoading(true)
+      // Fetch user profile data
+      const userResponse = await axios.get(`${API_URL}/api/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      setUserData(userResponse.data)
+
+      // Fetch doctors
+      let doctorsResponse
       try {
-        setLoading(true)
-        // Fetch user profile data
-        const userResponse = await axios.get(`${API_URL}/api/auth/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-
-        setUserData(userResponse.data)
-
-        // Fetch system statistics and data
-        // In a real application, you would have endpoints for these
-        // For now, we'll make multiple requests to simulate this
-
-        // Fetch doctors
-        const doctorsResponse = await axios.get(`${API_URL}/api/doctors`, {
+        doctorsResponse = await axios.get(`${API_URL}/api/doctors`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         setDoctors(doctorsResponse.data)
+      } catch (err) {
+        console.error("Error fetching doctors:", err)
+      }
 
-        // Fetch patients
-        const patientsResponse = await axios.get(`${API_URL}/api/patients`, {
+      // Fetch patients
+      let patientsResponse
+      try {
+        patientsResponse = await axios.get(`${API_URL}/api/patients`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         setPatients(patientsResponse.data)
+      } catch (err) {
+        console.error("Error fetching patients:", err)
+      }
 
-        // Fetch hospitals
-        const hospitalsResponse = await axios.get(`${API_URL}/api/hospitals`, {
+      // Fetch hospitals
+      let hospitalsResponse
+      try {
+        hospitalsResponse = await axios.get(`${API_URL}/api/hospitals`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         setHospitals(hospitalsResponse.data)
-
-        // Set statistics
-        setStats({
-          totalPatients: patientsResponse.data.length,
-          totalDoctors: doctorsResponse.data.length,
-          totalAppointments: 3750, // Placeholder
-          totalReferrals: 620, // Placeholder
-          totalHospitals: hospitalsResponse.data.length,
-        })
       } catch (err) {
-        console.error("Error fetching data:", err)
-        setError("Failed to load dashboard data.  Please try again.")
-        if (err.response?.status === 401) {
-          localStorage.removeItem("token")
-          localStorage.removeItem("userRole")
-          setIsLoggedIn(false)
-          setUserRole(null)
-          navigate("/login")
-        }
-      } finally {
-        setLoading(false)
+        console.error("Error fetching hospitals:", err)
       }
-    }
 
+      // Fetch appointments
+      try {
+        // For admin, we'd need a special endpoint to get all appointments
+        const appointmentsResponse = await axios.get(`${API_URL}/api/appointments/all`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setAppointments(appointmentsResponse.data || [])
+      } catch (err) {
+        console.error("Error fetching appointments:", err)
+        // If the endpoint doesn't exist yet, we'll just use an empty array
+        setAppointments([])
+      }
+
+      // Fetch referrals
+      try {
+        // For admin, we'd need a special endpoint to get all referrals
+        const referralsResponse = await axios.get(`${API_URL}/api/referrals/all`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setReferrals(referralsResponse.data || [])
+      } catch (err) {
+        console.error("Error fetching referrals:", err)
+        // If the endpoint doesn't exist yet, we'll just use an empty array
+        setReferrals([])
+      }
+
+      // Set statistics
+      setStats({
+        totalPatients: patientsResponse.data.length,
+        totalDoctors: doctorsResponse.data.length,
+        totalAppointments: appointments.length || 3750, // Placeholder if we don't have real data
+        totalReferrals: referrals.length || 620, // Placeholder if we don't have real data
+        totalHospitals: hospitalsResponse.data.length,
+      })
+    } catch (err) {
+      console.error("Error fetching data:", err)
+      setError("Failed to load dashboard data. Please try again.")
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token")
+        localStorage.removeItem("userRole")
+        setIsLoggedIn(false)
+        setUserRole(null)
+        navigate("/login")
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchData()
   }, [navigate, setIsLoggedIn, setUserRole])
 
@@ -122,6 +165,94 @@ const AdminDashboard = () => {
   const formatDate = (dateString) => {
     const options = { year: "numeric", month: "long", day: "numeric" }
     return new Date(dateString).toLocaleDateString(undefined, options)
+  }
+
+  const handleDoctorSuccess = (newDoctor) => {
+    setDoctors([newDoctor, ...doctors])
+    setShowAddDoctorForm(false)
+    alert("Doctor added successfully!")
+  }
+
+  const [newDoctorData, setNewDoctorData] = useState({
+    name: "",
+    email: "",
+    username: "",
+    password: "",
+    specialization: "",
+    licenseNumber: "",
+    hospital: "",
+  })
+
+  const handleAddDoctor = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setError("You must be logged in to add a doctor")
+        setLoading(false)
+        return
+      }
+
+      // First create a user with doctor role
+      const userResponse = await axios.post(
+        `${API_URL}/api/auth/register`,
+        {
+          name: newDoctorData.name,
+          email: newDoctorData.email,
+          username: newDoctorData.username || newDoctorData.email.split("@")[0], // Add username field
+          password: newDoctorData.password,
+          role: "doctor",
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      )
+
+      console.log("User created:", userResponse.data)
+
+      // Then create the doctor profile
+      const doctorResponse = await axios.post(
+        `${API_URL}/api/doctors`,
+        {
+          email: newDoctorData.email,
+          specialization: newDoctorData.specialization,
+          licenseNumber: newDoctorData.licenseNumber,
+          hospital: newDoctorData.hospital,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+
+      console.log("Doctor profile created:", doctorResponse.data)
+
+      // Reset form and refresh data
+      setNewDoctorData({
+        name: "",
+        email: "",
+        username: "",
+        password: "",
+        specialization: "",
+        licenseNumber: "",
+        hospital: "",
+      })
+      setShowAddDoctorForm(false)
+      fetchData()
+      alert("Doctor added successfully!")
+    } catch (err) {
+      console.error("Error adding doctor:", err)
+      setError(err.response?.data?.message || "Failed to add doctor. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (loading) {
@@ -610,100 +741,130 @@ const AdminDashboard = () => {
         {/* Doctor Management Tab */}
         {activeTab === "doctors" && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Doctor Management</h2>
-                <button className="bg-primary text-white py-2 px-4 rounded-md hover:bg-accent transition flex items-center">
-                  <FaPlus className="mr-2" />
-                  Add New Doctor
+            {showAddDoctorForm ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowAddDoctorForm(false)}
+                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                >
+                  <FaTimes size={20} />
                 </button>
+                <AddDoctorForm
+                  onSuccess={handleDoctorSuccess}
+                  onCancel={() => setShowAddDoctorForm(false)}
+                  handleAddDoctor={handleAddDoctor}
+                  newDoctorData={newDoctorData}
+                  setNewDoctorData={setNewDoctorData}
+                  loading={loading}
+                  error={error}
+                />
               </div>
+            ) : (
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-800">Doctor Management</h2>
+                  <button
+                    onClick={() => setShowAddDoctorForm(true)}
+                    className="bg-primary text-white py-2 px-4 rounded-md hover:bg-accent transition flex items-center"
+                  >
+                    <FaPlus className="mr-2" />
+                    Add New Doctor
+                  </button>
+                </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Doctor
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Specialization
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Hospital
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Contact
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {doctors.length > 0 ? (
-                      doctors.map((doctor) => (
-                        <tr key={doctor._id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                <FaUserMd className="text-gray-500" size={20} />
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  Dr. {doctor.user?.name || "Unknown"}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Doctor
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Specialization
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Hospital
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Contact
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {doctors.length > 0 ? (
+                        doctors.map((doctor) => (
+                          <tr key={doctor._id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                  <FaUserMd className="text-gray-500" size={20} />
                                 </div>
-                                <div className="text-sm text-gray-500">{doctor.email}</div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    Dr. {doctor.user?.name || "Unknown"}
+                                  </div>
+                                  <div className="text-sm text-gray-500">{doctor.email}</div>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{doctor.specialization}</div>
-                            <div className="text-xs text-gray-500">License: {doctor.licenseNumber}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{doctor.hospital?.name || "Not Assigned"}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{doctor.contactInfo?.email}</div>
-                            <div className="text-sm text-gray-500">{doctor.contactInfo?.phone}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-primary hover:text-accent mr-3">
-                              <FaEdit /> Edit
-                            </button>
-                            <button className="text-red-600 hover:text-red-900">
-                              <FaTrash /> Delete
-                            </button>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{doctor.specialization}</div>
+                              <div className="text-xs text-gray-500">License: {doctor.licenseNumber}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{doctor.hospital?.name || "Not Assigned"}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{doctor.contactInfo?.email}</div>
+                              <div className="text-sm text-gray-500">{doctor.contactInfo?.phone}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button className="text-primary hover:text-accent mr-3">
+                                <FaEdit /> Edit
+                              </button>
+                              <button className="text-red-600 hover:text-red-900">
+                                <FaTrash /> Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                            No doctors found.
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
-                          No doctors found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
+          </div>
+        )}
+
+        {/* Reports Tab */}
+        {activeTab === "reports" && (
+          <div className="space-y-6">
+            <ReportGenerator />
           </div>
         )}
 
@@ -820,7 +981,209 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Other tabs would be implemented similarly */}
+        {/* Appointments Tab */}
+        {activeTab === "appointments" && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Appointment Management</h2>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search appointments..."
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Patient
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Doctor
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Date & Time
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Hospital
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Status
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {appointments.length > 0 ? (
+                      appointments.map((appointment) => (
+                        <tr key={appointment._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {appointment.patient?.user?.name || "Unknown"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              Dr. {appointment.doctor?.user?.name || "Unknown"}
+                            </div>
+                            <div className="text-xs text-gray-500">{appointment.doctor?.specialization}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{formatDate(appointment.date)}</div>
+                            <div className="text-xs text-gray-500">{appointment.time}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{appointment.hospital?.name || "Unknown"}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                appointment.status === "completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : appointment.status === "scheduled"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : appointment.status === "cancelled"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                              }`}
+                            >
+                              {appointment.status?.charAt(0).toUpperCase() + appointment.status?.slice(1) || "Unknown"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button className="text-primary hover:text-accent mr-3">
+                              <FaEdit /> Edit
+                            </button>
+                            <button className="text-red-600 hover:text-red-900">
+                              <FaTrash /> Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                          No appointments found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === "settings" && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">System Settings</h2>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">General Settings</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">System Name</label>
+                      <input
+                        type="text"
+                        value="MEDREF - Medical Referral System"
+                        className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Admin Email</label>
+                      <input
+                        type="email"
+                        value="admin@medref.com"
+                        className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">Security Settings</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <input type="checkbox" id="2fa" className="mr-2" />
+                      <label htmlFor="2fa" className="text-sm text-gray-700">
+                        Enable Two-Factor Authentication
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input type="checkbox" id="session" className="mr-2" checked />
+                      <label htmlFor="session" className="text-sm text-gray-700">
+                        Limit Session Duration (30 days)
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input type="checkbox" id="audit" className="mr-2" checked />
+                      <label htmlFor="audit" className="text-sm text-gray-700">
+                        Enable Audit Logging
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">Email Notifications</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <input type="checkbox" id="email-new-user" className="mr-2" checked />
+                      <label htmlFor="email-new-user" className="text-sm text-gray-700">
+                        New User Registration
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input type="checkbox" id="email-appointment" className="mr-2" checked />
+                      <label htmlFor="email-appointment" className="text-sm text-gray-700">
+                        New Appointment
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input type="checkbox" id="email-referral" className="mr-2" checked />
+                      <label htmlFor="email-referral" className="text-sm text-gray-700">
+                        New Referral
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6">
+                <button className="bg-primary text-white py-2 px-4 rounded-md hover:bg-accent transition">
+                  Save Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

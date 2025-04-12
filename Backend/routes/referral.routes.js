@@ -4,11 +4,12 @@ import {
   getPatientReferrals,
   getReferringDoctorReferrals,
   getReferredDoctorReferrals,
+  getAllReferrals,
   getReferralById,
   updateReferralStatus,
   createAppointmentFromReferral,
 } from "../controllers/referral.controller.js"
-import { protect, doctor } from "../middleware/auth.middleware.js"
+import { protect, doctor, admin } from "../middleware/auth.middleware.js"
 
 const router = express.Router()
 
@@ -17,6 +18,7 @@ router.route("/").post(protect, doctor, createReferral)
 router.get("/patient", protect, getPatientReferrals)
 router.get("/referring", protect, doctor, getReferringDoctorReferrals)
 router.get("/referred", protect, doctor, getReferredDoctorReferrals)
+router.get("/all", protect, admin, getAllReferrals)
 
 router.route("/:id").get(protect, getReferralById)
 

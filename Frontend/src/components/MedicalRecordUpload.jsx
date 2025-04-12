@@ -3,6 +3,7 @@
 import { useState } from "react"
 import axios from "axios"
 import { FaUpload, FaFile, FaFilePdf, FaFileImage, FaFileAlt, FaTrash } from "react-icons/fa"
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
 const MedicalRecordUpload = ({ patientId, onUploadSuccess }) => {

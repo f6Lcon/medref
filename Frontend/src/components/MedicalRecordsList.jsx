@@ -26,6 +26,7 @@ const MedicalRecordsList = ({ patientId, isDoctor = false }) => {
           return
         }
 
+        console.log(`Fetching medical records for patient: ${patientId}`)
         const response = await axios.get(`${API_URL}/api/medical-records/patient/${patientId}`, {
           headers: {
             Authorization: `Bearer ${token}`,

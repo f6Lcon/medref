@@ -18,6 +18,10 @@ import {
   FaPlus,
 } from "react-icons/fa"
 import LoginContext from "../context/LoginContext"
+import AppointmentStatusUpdate from "./AppointmentStatusUpdate"
+import ReferralActions from "./ReferralActions"
+import CreateReferralForm from "./CreateReferralForm"
+import AppointmentFromReferral from "./AppointmentFromReferral"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
@@ -30,72 +34,104 @@ const DoctorDashboard = () => {
   const [hospitals, setHospitals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [selectedReferral, setSelectedReferral] = useState(null)
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false)
+  const [selectedPatient, setSelectedPatient] = useState(null)
   const navigate = useNavigate()
   const { setIsLoggedIn, setUserRole } = useContext(LoginContext)
+  const [showCreateReferralForm, setShowCreateReferralForm] = useState(false)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        navigate("/login")
-        return
-      }
+  const fetchData = async () => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      navigate("/login")
+      return
+    }
 
+    try {
+      setLoading(true)
+      setError("")
+
+      // Fetch user profile data
+      const userResponse = await axios.get(`${API_URL}/api/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      setUserData(userResponse.data)
+      console.log("User data:", userResponse.data)
+
+      // Fetch appointments
       try {
-        setLoading(true)
-        // Fetch user profile data
-        const userResponse = await axios.get(`${API_URL}/api/auth/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-
-        setUserData(userResponse.data)
-
-        // Fetch appointments
         const appointmentsResponse = await axios.get(`${API_URL}/api/appointments/doctor`, {
           headers: { Authorization: `Bearer ${token}` },
         })
-
+        console.log("Doctor appointments:", appointmentsResponse.data)
         setAppointments(appointmentsResponse.data)
+      } catch (aptErr) {
+        console.error("Error fetching appointments:", aptErr)
+        setError((prev) => prev + " Failed to load appointments.")
+      }
 
-        // Fetch referrals (both made by this doctor and to this doctor)
+      // Fetch referrals (both made by this doctor and to this doctor)
+      try {
         const referringResponse = await axios.get(`${API_URL}/api/referrals/referring`, {
           headers: { Authorization: `Bearer ${token}` },
         })
+        console.log("Referring referrals:", referringResponse.data)
 
         const referredResponse = await axios.get(`${API_URL}/api/referrals/referred`, {
           headers: { Authorization: `Bearer ${token}` },
         })
+        console.log("Referred to referrals:", referredResponse.data)
 
-        setReferrals([...referringResponse.data, ...referredResponse.data])
+        // Combine both types of referrals
+        const allReferrals = [...referringResponse.data, ...referredResponse.data]
+        console.log("Combined referrals:", allReferrals)
+        setReferrals(allReferrals)
+      } catch (refErr) {
+        console.error("Error fetching referrals:", refErr)
+        setError((prev) => prev + " Failed to load referrals.")
+      }
 
-        // Fetch patients
+      // Fetch patients
+      try {
         const patientsResponse = await axios.get(`${API_URL}/api/patients`, {
           headers: { Authorization: `Bearer ${token}` },
         })
-
+        console.log("Patients:", patientsResponse.data)
         setPatients(patientsResponse.data)
+      } catch (patErr) {
+        console.error("Error fetching patients:", patErr)
+        setError((prev) => prev + " Failed to load patients.")
+      }
 
-        // Fetch hospitals
+      // Fetch hospitals
+      try {
         const hospitalsResponse = await axios.get(`${API_URL}/api/hospitals`, {
           headers: { Authorization: `Bearer ${token}` },
         })
-
+        console.log("Hospitals:", hospitalsResponse.data)
         setHospitals(hospitalsResponse.data)
-      } catch (err) {
-        console.error("Error fetching data:", err)
-        setError("Failed to load dashboard data. Please try again.")
-        if (err.response?.status === 401) {
-          localStorage.removeItem("token")
-          localStorage.removeItem("userRole")
-          setIsLoggedIn(false)
-          setUserRole(null)
-          navigate("/login")
-        }
-      } finally {
-        setLoading(false)
+      } catch (hospErr) {
+        console.error("Error fetching hospitals:", hospErr)
+        setError((prev) => prev + " Failed to load hospitals.")
       }
+    } catch (err) {
+      console.error("Error fetching data:", err)
+      setError("Failed to load dashboard data. Please try again.")
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token")
+        localStorage.removeItem("userRole")
+        setIsLoggedIn(false)
+        setUserRole(null)
+        navigate("/login")
+      }
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchData()
   }, [navigate, setIsLoggedIn, setUserRole])
 
@@ -110,6 +146,67 @@ const DoctorDashboard = () => {
   const formatDate = (dateString) => {
     const options = { year: "numeric", month: "long", day: "numeric" }
     return new Date(dateString).toLocaleDateString(undefined, options)
+  }
+
+  const handleReferralSuccess = (newReferral) => {
+    console.log("New referral created:", newReferral)
+    // Add the new referral to the existing referrals
+    setReferrals((prevReferrals) => [newReferral, ...prevReferrals])
+    // Hide the create referral form
+    setShowCreateReferralForm(false)
+    // Show a success message
+    alert("Referral created successfully!")
+  }
+
+  const handleAppointmentStatusUpdate = (updatedAppointment) => {
+    console.log("Updating appointment status:", updatedAppointment)
+    setAppointments(appointments.map((apt) => (apt._id === updatedAppointment._id ? updatedAppointment : apt)))
+  }
+
+  const handleReferralUpdate = (updatedReferral) => {
+    console.log("Updating referral:", updatedReferral)
+    setReferrals(referrals.map((ref) => (ref._id === updatedReferral._id ? updatedReferral : ref)))
+  }
+
+  const handleScheduleAppointment = (referral) => {
+    console.log("Scheduling appointment for referral:", referral)
+    setSelectedReferral(referral)
+    setShowAppointmentForm(true)
+    setActiveTab("referrals")
+  }
+
+  const handleAppointmentFromReferralSuccess = (newAppointment) => {
+    console.log("New appointment created from referral:", newAppointment)
+    // Add the new appointment to the list
+    setAppointments([newAppointment, ...appointments])
+
+    // Update the referral to mark that an appointment has been created
+    const updatedReferral = {
+      ...selectedReferral,
+      appointmentCreated: true,
+      status: "accepted",
+    }
+
+    handleReferralUpdate(updatedReferral)
+
+    // Hide the appointment form
+    setShowAppointmentForm(false)
+    setSelectedReferral(null)
+
+    // Show a success message
+    alert("Appointment scheduled successfully!")
+
+    // Refresh data
+    fetchData()
+  }
+
+  const handleViewPatientRecords = (patient) => {
+    setSelectedPatient(patient)
+    setActiveTab("records")
+  }
+
+  const toggleCreateReferralForm = () => {
+    setShowCreateReferralForm(!showCreateReferralForm)
   }
 
   if (loading) {
@@ -246,7 +343,9 @@ const DoctorDashboard = () => {
                       : activeTab === "hospitals"
                         ? "Hospitals"
                         : activeTab === "records"
-                          ? "Medical Records"
+                          ? selectedPatient
+                            ? `Medical Records: ${selectedPatient.user?.name || "Patient"}`
+                            : "Medical Records"
                           : "My Profile"}
             </h1>
             <p className="text-gray-500">
@@ -304,8 +403,10 @@ const DoctorDashboard = () => {
                         </p>
                         <p className="text-sm text-gray-500">{appointment.reason}</p>
                         <div className="flex mt-1">
-                          <button className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded mr-2">Start</button>
-                          <button className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">Reschedule</button>
+                          <AppointmentStatusUpdate
+                            appointment={appointment}
+                            onStatusUpdate={handleAppointmentStatusUpdate}
+                          />
                         </div>
                       </div>
                     ))}
@@ -342,8 +443,11 @@ const DoctorDashboard = () => {
                         </p>
                         <p className="text-xs text-gray-400">{referral.reason}</p>
                         <div className="flex mt-1">
-                          <button className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded mr-2">Accept</button>
-                          <button className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Decline</button>
+                          <ReferralActions
+                            referral={referral}
+                            onReferralUpdate={handleReferralUpdate}
+                            onScheduleAppointment={handleScheduleAppointment}
+                          />
                         </div>
                       </div>
                     ))}
@@ -414,187 +518,6 @@ const DoctorDashboard = () => {
                     ></div>
                   </div>
                 </div>
-
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-700">Patients Seen</span>
-                    <span className="text-sm font-medium text-gray-700">
-                      {appointments.filter((apt) => apt.status === "completed").length}
-                    </span>
-                  </div>
-
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div
-                      className="bg-green-500 h-2.5 rounded-full"
-                      style={{
-                        width: `${Math.min(
-                          (appointments.filter((apt) => apt.status === "completed").length / 50) * 100,
-                          100,
-                        )}%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Quick Actions</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setActiveTab("appointments")}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-3 rounded-md text-sm transition"
-                    >
-                      View Schedule
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("referrals")}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-3 rounded-md text-sm transition"
-                    >
-                      Create Referral
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Patients Card */}
-            <div className="bg-white p-6 rounded-lg shadow-md md:col-span-2">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-800">Recent Patients</h2>
-                <button
-                  onClick={() => setActiveTab("patients")}
-                  className="text-primary hover:underline text-sm font-medium"
-                >
-                  View All
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Patient
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Last Visit
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Reason
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Status
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {appointments
-                      .sort((a, b) => new Date(b.date) - new Date(a.date))
-                      .slice(0, 5)
-                      .map((appointment) => (
-                        <tr key={appointment._id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                <FaUserCircle className="text-gray-500" size={20} />
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {appointment.patient?.user?.name || "Unknown Patient"}
-                                </div>
-                                <div className="text-sm text-gray-500">{appointment.patient?.email || "No email"}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{formatDate(appointment.date)}</div>
-                            <div className="text-sm text-gray-500">{appointment.time}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{appointment.reason}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                appointment.status === "completed"
-                                  ? "bg-green-100 text-green-800"
-                                  : appointment.status === "scheduled"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : appointment.status === "cancelled"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-primary hover:text-accent mr-3">View</button>
-                            <button className="text-primary hover:text-accent">Notes</button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Upcoming Schedule Card */}
-            <div className="bg-white p-6 rounded-lg shadow-md md:col-span-2 lg:col-span-3">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Upcoming Schedule</h2>
-              <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-                {Array.from({ length: 7 }).map((_, index) => {
-                  const date = new Date()
-                  date.setDate(date.getDate() + index)
-                  const dayAppointments = appointments.filter(
-                    (apt) => new Date(apt.date).toDateString() === date.toDateString(),
-                  )
-
-                  return (
-                    <div key={index} className="border rounded-lg p-3">
-                      <div className="text-center mb-2">
-                        <p className="text-sm font-medium text-gray-500">
-                          {date.toLocaleDateString("en-US", { weekday: "short" })}
-                        </p>
-                        <p className="text-lg font-bold">{date.getDate()}</p>
-                      </div>
-                      <div className="space-y-2">
-                        {dayAppointments.length > 0 ? (
-                          dayAppointments
-                            .sort((a, b) => a.time.localeCompare(b.time))
-                            .slice(0, 3)
-                            .map((apt) => (
-                              <div key={apt._id} className="text-xs p-1 rounded bg-blue-50 border-l-2 border-primary">
-                                <p className="font-medium">{apt.time}</p>
-                                <p className="truncate">{apt.patient?.user?.name || "Unknown"}</p>
-                              </div>
-                            ))
-                        ) : (
-                          <p className="text-xs text-gray-500 text-center">No appointments</p>
-                        )}
-                        {dayAppointments.length > 3 && (
-                          <p className="text-xs text-primary text-center">+{dayAppointments.length - 3} more</p>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
               </div>
             </div>
           </div>
@@ -602,403 +525,291 @@ const DoctorDashboard = () => {
 
         {/* Appointments Tab */}
         {activeTab === "appointments" && (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Appointment Management</h2>
-                <button className="bg-primary text-white py-2 px-4 rounded-md hover:bg-accent transition flex items-center">
-                  <FaPlus className="mr-2" />
-                  New Appointment
-                </button>
-              </div>
-
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                <div className="flex space-x-2 mb-4 md:mb-0">
-                  <button className="bg-primary text-white px-3 py-1 rounded-md">All</button>
-                  <button className="bg-gray-100 text-gray-800 px-3 py-1 rounded-md">Today</button>
-                  <button className="bg-gray-100 text-gray-800 px-3 py-1 rounded-md">Upcoming</button>
-                  <button className="bg-gray-100 text-gray-800 px-3 py-1 rounded-md">Completed</button>
-                </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search appointments..."
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                </div>
-              </div>
-
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">All Appointments</h2>
+            {appointments.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full leading-normal">
+                  <thead>
                     <tr>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Patient
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Date & Time
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Date
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Type
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Time
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Reason
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Status
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {appointments.length > 0 ? (
-                      appointments
-                        .sort((a, b) => new Date(b.date) - new Date(a.date))
-                        .map((appointment) => (
-                          <tr key={appointment._id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                  <FaUserCircle className="text-gray-500" size={20} />
-                                </div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {appointment.patient?.user?.name || "Unknown Patient"}
-                                  </div>
-                                  <div className="text-sm text-gray-500">
-                                    {appointment.patient?.email || "No email"}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{formatDate(appointment.date)}</div>
-                              <div className="text-sm text-gray-500">{appointment.time}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                  appointment.type === "regular"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : appointment.type === "follow-up"
-                                      ? "bg-green-100 text-green-800"
-                                      : appointment.type === "emergency"
-                                        ? "bg-red-100 text-red-800"
-                                        : "bg-purple-100 text-purple-800"
-                                }`}
-                              >
-                                {appointment.type.charAt(0).toUpperCase() + appointment.type.slice(1)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="text-sm text-gray-900 max-w-xs truncate">{appointment.reason}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                  appointment.status === "completed"
-                                    ? "bg-green-100 text-green-800"
-                                    : appointment.status === "scheduled"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : appointment.status === "cancelled"
-                                        ? "bg-red-100 text-red-800"
-                                        : "bg-yellow-100 text-yellow-800"
-                                }`}
-                              >
-                                {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <button className="text-primary hover:text-accent mr-3">View</button>
-                              {appointment.status === "scheduled" && (
-                                <>
-                                  <button className="text-green-600 hover:text-green-900 mr-3">Complete</button>
-                                  <button className="text-red-600 hover:text-red-900">Cancel</button>
-                                </>
-                              )}
-                            </td>
-                          </tr>
-                        ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                          No appointments found.
+                  <tbody>
+                    {appointments.map((appointment) => (
+                      <tr key={appointment._id}>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          {appointment.patient?.user?.name || "Unknown Patient"}
+                        </td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          {formatDate(appointment.date)}
+                        </td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{appointment.time}</td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{appointment.reason}</td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{appointment.status}</td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          <AppointmentStatusUpdate
+                            appointment={appointment}
+                            onStatusUpdate={handleAppointmentStatusUpdate}
+                          />
                         </td>
                       </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
-            </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No appointments found.</p>
+            )}
+          </div>
+        )}
+
+        {/* Patients Tab */}
+        {activeTab === "patients" && (
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">All Patients</h2>
+            {patients.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full leading-normal">
+                  <thead>
+                    <tr>
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Phone
+                      </th>
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {patients.map((patient) => (
+                      <tr key={patient._id}>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          {patient.user?.name || "Unknown"}
+                        </td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          {patient.email || patient.user?.email || "N/A"}
+                        </td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          {patient.phoneNumber || "N/A"}
+                        </td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          <button
+                            onClick={() => handleViewPatientRecords(patient)}
+                            className="text-primary hover:underline"
+                          >
+                            View Records
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No patients found.</p>
+            )}
           </div>
         )}
 
         {/* Referrals Tab */}
         {activeTab === "referrals" && (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Create New Referral</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="patient" className="block text-sm font-medium text-gray-700 mb-1">
-                    Select Patient
-                  </label>
-                  <select
-                    id="patient"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">Select a patient</option>
-                    {patients.map((patient) => (
-                      <option key={patient._id} value={patient._id}>
-                        {patient.user?.name || "Unknown Patient"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="referredDoctor" className="block text-sm font-medium text-gray-700 mb-1">
-                    Refer To Doctor (Optional)
-                  </label>
-                  <select
-                    id="referredDoctor"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">Select a doctor</option>
-                    {/* Populate with doctors from API */}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="referredHospital" className="block text-sm font-medium text-gray-700 mb-1">
-                    Refer To Hospital
-                  </label>
-                  <select
-                    id="referredHospital"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  >
-                    <option value="">Select a hospital</option>
-                    {hospitals.map((hospital) => (
-                      <option key={hospital._id} value={hospital._id}>
-                        {hospital.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="urgency" className="block text-sm font-medium text-gray-700 mb-1">
-                    Urgency
-                  </label>
-                  <select
-                    id="urgency"
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium" selected>
-                      Medium
-                    </option>
-                    <option value="high">High</option>
-                    <option value="emergency">Emergency</option>
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-1">
-                    Reason for Referral
-                  </label>
-                  <textarea
-                    id="reason"
-                    rows={3}
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Please describe the reason for this referral"
-                    required
-                  ></textarea>
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
-                    Additional Notes
-                  </label>
-                  <textarea
-                    id="notes"
-                    rows={3}
-                    className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Any additional notes or information"
-                  ></textarea>
-                </div>
-                <div className="md:col-span-2">
-                  <button className="bg-primary text-white py-2 px-4 rounded-md hover:bg-accent transition">
-                    Create Referral
-                  </button>
-                </div>
-              </div>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">All Referrals</h2>
+              <button
+                onClick={toggleCreateReferralForm}
+                className="flex items-center space-x-2 bg-primary text-white p-2 rounded-md hover:bg-primary-dark transition"
+              >
+                <FaPlus />
+                <span>Create Referral</span>
+              </button>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Referrals</h2>
-                <div className="flex space-x-2">
-                  <button className="bg-primary text-white px-3 py-1 rounded-md">All</button>
-                  <button className="bg-gray-100 text-gray-800 px-3 py-1 rounded-md">Sent</button>
-                  <button className="bg-gray-100 text-gray-800 px-3 py-1 rounded-md">Received</button>
-                </div>
+            {showCreateReferralForm && (
+              <div className="mb-4">
+                <CreateReferralForm
+                  onReferralSuccess={handleReferralSuccess}
+                  onClose={() => setShowCreateReferralForm(false)}
+                />
               </div>
+            )}
 
+            {showAppointmentForm && selectedReferral && (
+              <div className="mb-4">
+                <AppointmentFromReferral
+                  referral={selectedReferral}
+                  onSuccess={handleAppointmentFromReferralSuccess}
+                  onCancel={() => {
+                    setShowAppointmentForm(false)
+                    setSelectedReferral(null)
+                  }}
+                />
+              </div>
+            )}
+
+            {referrals.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full leading-normal">
+                  <thead>
                     <tr>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Patient
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Type
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Referring Doctor
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Referred To/From
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Referred To Doctor
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Date
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Reason
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Status
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {referrals.length > 0 ? (
-                      referrals
-                        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                        .map((referral) => {
-                          const isSent = referral.referringDoctor?._id === userData?.doctorData?._id
-                          return (
-                            <tr key={referral._id}>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {referral.patient?.user?.name || "Unknown Patient"}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span
-                                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                    isSent ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
-                                  }`}
-                                >
-                                  {isSent ? "Sent" : "Received"}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">
-                                  {isSent
-                                    ? `Dr. ${referral.referredToDoctor?.user?.name || "Unknown"}`
-                                    : `Dr. ${referral.referringDoctor?.user?.name || "Unknown"}`}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {referral.referredToHospital?.name || "Unknown Hospital"}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{formatDate(referral.createdAt)}</div>
-                                <div
-                                  className={`text-xs ${
-                                    referral.urgency === "low"
-                                      ? "text-green-600"
-                                      : referral.urgency === "medium"
-                                        ? "text-yellow-600"
-                                        : referral.urgency === "high"
-                                          ? "text-orange-600"
-                                          : "text-red-600"
-                                  }`}
-                                >
-                                  {referral.urgency.charAt(0).toUpperCase() + referral.urgency.slice(1)} Urgency
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span
-                                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                    referral.status === "pending"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : referral.status === "accepted"
-                                        ? "bg-green-100 text-green-800"
-                                        : referral.status === "completed"
-                                          ? "bg-blue-100 text-blue-800"
-                                          : "bg-red-100 text-red-800"
-                                  }`}
-                                >
-                                  {referral.status.charAt(0).toUpperCase() + referral.status.slice(1)}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button className="text-primary hover:text-accent mr-3">View</button>
-                                {!isSent && referral.status === "pending" && (
-                                  <>
-                                    <button className="text-green-600 hover:text-green-900 mr-3">Accept</button>
-                                    <button className="text-red-600 hover:text-red-900">Decline</button>
-                                  </>
-                                )}
-                                {!isSent && referral.status === "accepted" && !referral.appointmentCreated && (
-                                  <button className="text-primary hover:text-accent">Schedule Appointment</button>
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        })
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                          No referrals found.
+                  <tbody>
+                    {referrals.map((referral) => (
+                      <tr key={referral._id}>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          {referral.patient?.user?.name || "Unknown Patient"}
+                        </td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          Dr. {referral.referringDoctor?.user?.name || "Unknown"}
+                        </td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          Dr. {referral.referredToDoctor?.user?.name || "Unknown"}
+                        </td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{referral.reason}</td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{referral.status}</td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          <ReferralActions
+                            referral={referral}
+                            onReferralUpdate={handleReferralUpdate}
+                            onScheduleAppointment={handleScheduleAppointment}
+                          />
                         </td>
                       </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
-            </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No referrals found.</p>
+            )}
           </div>
         )}
 
-        {/* Other tabs would be implemented similarly */}
+        {/* Hospitals Tab */}
+        {activeTab === "hospitals" && (
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">All Hospitals</h2>
+            {hospitals.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full leading-normal">
+                  <thead>
+                    <tr>
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Address
+                      </th>
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Contact
+                      </th>
+                      <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Departments
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hospitals.map((hospital) => (
+                      <tr key={hospital._id}>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{hospital.name}</td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          {hospital.address?.street}, {hospital.address?.city}, {hospital.address?.state}{" "}
+                          {hospital.address?.zipCode}
+                        </td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          {hospital.contactInfo?.phone}
+                          <br />
+                          {hospital.contactInfo?.email}
+                        </td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          {hospital.departments?.join(", ") || "N/A"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No hospitals found.</p>
+            )}
+          </div>
+        )}
+
+        {/* Medical Records Tab */}
+        {activeTab === "records" && selectedPatient && (
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Medical Records for {selectedPatient.user?.name || "Patient"}
+            </h2>
+            {/* Display medical records here - Placeholder */}
+            <p className="text-gray-500 text-sm">Medical records will be displayed here. This is a placeholder.</p>
+          </div>
+        )}
+
+        {/* My Profile Tab */}
+        {activeTab === "profile" && (
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">My Profile</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2">Name:</label>
+                <p className="text-gray-600">{userData?.name || "N/A"}</p>
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2">Email:</label>
+                <p className="text-gray-600">{userData?.email || "N/A"}</p>
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2">Specialization:</label>
+                <p className="text-gray-600">{userData?.doctorData?.specialization || "N/A"}</p>
+              </div>
+              {/* Add more profile details here */}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

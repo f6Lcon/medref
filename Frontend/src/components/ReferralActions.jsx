@@ -15,6 +15,7 @@ const ReferralActions = ({ referral, onReferralUpdate, onScheduleAppointment }) 
   const [notes, setNotes] = useState("")
   const [showNotes, setShowNotes] = useState(false)
 
+  // Update the handleReferralUpdate function to properly update the UI
   const updateStatus = async (newStatus) => {
     setLoading(true)
     setError("")
@@ -27,6 +28,8 @@ const ReferralActions = ({ referral, onReferralUpdate, onScheduleAppointment }) 
         return
       }
 
+      console.log(`Updating referral ${referral._id} status to ${newStatus}`)
+
       const response = await axios.put(
         `${API_URL}/api/referrals/${referral._id}/status`,
         { status: newStatus },
@@ -37,6 +40,8 @@ const ReferralActions = ({ referral, onReferralUpdate, onScheduleAppointment }) 
           },
         },
       )
+
+      console.log("Referral status updated:", response.data)
 
       // Call the callback function with the updated referral
       if (onReferralUpdate) {

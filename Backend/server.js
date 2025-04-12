@@ -9,7 +9,14 @@ import hospitalRoutes from "./routes/hospital.routes.js"
 import appointmentRoutes from "./routes/appointment.routes.js"
 import referralRoutes from "./routes/referral.routes.js"
 import adminRoutes from "./routes/admin.routes.js"
+import medicalRecordRoutes from "./routes/medicalRecord.routes.js"
 import { notFound, errorHandler } from "./middleware/error.middleware.js"
+import path from "path"
+import { fileURLToPath } from "url"
+
+// Get the directory name
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 dotenv.config()
 
@@ -22,6 +29,9 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+// Serve static files from the uploads directory
+app.use("/uploads", express.static(path.join(__dirname, "uploads")))
+
 // Routes
 app.use("/api/auth", authRoutes)
 app.use("/api/patients", patientRoutes)
@@ -30,6 +40,7 @@ app.use("/api/hospitals", hospitalRoutes)
 app.use("/api/appointments", appointmentRoutes)
 app.use("/api/referrals", referralRoutes)
 app.use("/api/admins", adminRoutes)
+app.use("/api/medical-records", medicalRecordRoutes)
 
 // Error handling middleware
 app.use(notFound)

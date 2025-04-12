@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import { FaUserCircle, FaHospital, FaExclamationTriangle, FaClipboardList, FaUserMd } from "react-icons/fa"
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000"
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
 const CreateReferralForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -96,6 +96,8 @@ const CreateReferralForm = ({ onSuccess }) => {
         urgency: formData.urgency,
       }
 
+      console.log("Submitting referral data:", referralData)
+
       // Submit the referral
       const response = await axios.post(`${API_URL}/api/referrals`, referralData, {
         headers: {
@@ -104,7 +106,7 @@ const CreateReferralForm = ({ onSuccess }) => {
         },
       })
 
-      console.log("Referral created:", response.data)
+      console.log("Referral created successfully:", response.data)
       setSuccess(true)
 
       // Reset form

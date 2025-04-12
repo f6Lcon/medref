@@ -11,6 +11,8 @@ import Appointment from "../models/appointment.model.js"
 const createReferral = asyncHandler(async (req, res) => {
   const { patient, referredToDoctor, referredToHospital, reason, notes, urgency, medicalRecords } = req.body
 
+  console.log("Creating referral with data:", req.body)
+
   // Get referring doctor ID from user
   const referringDoctor = await Doctor.findOne({ user: req.user._id })
 
@@ -54,7 +56,33 @@ const createReferral = asyncHandler(async (req, res) => {
   })
 
   if (referral) {
-    res.status(201).json(referral)
+    // Populate the referral data before sending the response
+    const populatedReferral = await Referral.findById(referral._id)
+      .populate({
+        path: "patient",
+        populate: {
+          path: "user",
+          select: "name email",
+        },
+      })
+      .populate({
+        path: "referringDoctor",
+        populate: {
+          path: "user",
+          select: "name email",
+        },
+      })
+      .populate({
+        path: "referredToDoctor",
+        populate: {
+          path: "user",
+          select: "name email",
+        },
+      })
+      .populate("referredToHospital")
+
+    console.log("Referral created successfully:", populatedReferral)
+    res.status(201).json(populatedReferral)
   } else {
     res.status(400)
     throw new Error("Invalid referral data")
@@ -73,6 +101,8 @@ const getPatientReferrals = asyncHandler(async (req, res) => {
     throw new Error("Patient profile not found")
   }
 
+  console.log(`Fetching referrals for patient: ${patient._id}`)
+
   const referrals = await Referral.find({ patient: patient._id })
     .populate({
       path: "referringDoctor",
@@ -88,8 +118,10 @@ const getPatientReferrals = asyncHandler(async (req, res) => {
         select: "name email",
       },
     })
+    .populate("referredToHospital")
     .sort({ createdAt: -1 })
 
+  console.log(`Found ${referrals.length} referrals for patient`)
   res.json(referrals)
 })
 
@@ -104,6 +136,8 @@ const getReferringDoctorReferrals = asyncHandler(async (req, res) => {
     res.status(404)
     throw new Error("Doctor profile not found")
   }
+
+  console.log(`Fetching referrals made by doctor: ${doctor._id}`)
 
   const referrals = await Referral.find({ referringDoctor: doctor._id })
     .populate({
@@ -120,8 +154,10 @@ const getReferringDoctorReferrals = asyncHandler(async (req, res) => {
         select: "name email",
       },
     })
+    .populate("referredToHospital")
     .sort({ createdAt: -1 })
 
+  console.log(`Found ${referrals.length} referrals made by doctor`)
   res.json(referrals)
 })
 
@@ -136,6 +172,8 @@ const getReferredDoctorReferrals = asyncHandler(async (req, res) => {
     res.status(404)
     throw new Error("Doctor profile not found")
   }
+
+  console.log(`Fetching referrals to doctor: ${doctor._id}`)
 
   const referrals = await Referral.find({ referredToDoctor: doctor._id })
     .populate({
@@ -152,8 +190,50 @@ const getReferredDoctorReferrals = asyncHandler(async (req, res) => {
         select: "name email",
       },
     })
+    .populate("referredToHospital")
     .sort({ createdAt: -1 })
 
+  console.log(`Found ${referrals.length} referrals to doctor`)
+  res.json(referrals)
+})
+
+// @desc    Get all referrals (admin only)
+// @route   GET /api/referrals/all
+// @access  Private/Admin
+const getAllReferrals = asyncHandler(async (req, res) => {
+  if (req.user.role !== "admin") {
+    res.status(401)
+    throw new Error("Not authorized to access all referrals")
+  }
+
+  console.log("Admin fetching all referrals")
+
+  const referrals = await Referral.find({})
+    .populate({
+      path: "patient",
+      populate: {
+        path: "user",
+        select: "name email",
+      },
+    })
+    .populate({
+      path: "referringDoctor",
+      populate: {
+        path: "user",
+        select: "name email",
+      },
+    })
+    .populate({
+      path: "referredToDoctor",
+      populate: {
+        path: "user",
+        select: "name email",
+      },
+    })
+    .populate("referredToHospital")
+    .sort({ createdAt: -1 })
+
+  console.log(`Found ${referrals.length} total referrals`)
   res.json(referrals)
 })
 
@@ -183,6 +263,7 @@ const getReferralById = asyncHandler(async (req, res) => {
         select: "name email",
       },
     })
+    .populate("referredToHospital")
 
   if (referral) {
     // Check if the user is authorized to view this referral
@@ -192,8 +273,8 @@ const getReferralById = asyncHandler(async (req, res) => {
     if (
       (patient && referral.patient._id.toString() === patient._id.toString()) ||
       (doctor &&
-        (referral.referringDoctor._id.toString() === doctor._id.toString() ||
-          referral.referredToDoctor._id.toString() === doctor._id.toString())) ||
+        (referral.referringDoctor?._id.toString() === doctor._id.toString() ||
+          (referral.referredToDoctor && referral.referredToDoctor._id.toString() === doctor._id.toString()))) ||
       req.user.role === "admin"
     ) {
       res.json(referral)
@@ -213,16 +294,49 @@ const getReferralById = asyncHandler(async (req, res) => {
 const updateReferralStatus = asyncHandler(async (req, res) => {
   const { status } = req.body
 
+  console.log(`Updating referral ${req.params.id} status to ${status}`)
+
   const referral = await Referral.findById(req.params.id)
 
   if (referral) {
     // Check if the user is authorized to update this referral
     const doctor = await Doctor.findOne({ user: req.user._id })
 
-    if ((doctor && referral.referredToDoctor.toString() === doctor._id.toString()) || req.user.role === "admin") {
+    if (
+      (doctor && referral.referredToDoctor && referral.referredToDoctor.toString() === doctor._id.toString()) ||
+      (doctor && referral.referringDoctor.toString() === doctor._id.toString()) ||
+      req.user.role === "admin"
+    ) {
       referral.status = status
       const updatedReferral = await referral.save()
-      res.json(updatedReferral)
+
+      // Populate the referral data before sending the response
+      const populatedReferral = await Referral.findById(updatedReferral._id)
+        .populate({
+          path: "patient",
+          populate: {
+            path: "user",
+            select: "name email",
+          },
+        })
+        .populate({
+          path: "referringDoctor",
+          populate: {
+            path: "user",
+            select: "name email",
+          },
+        })
+        .populate({
+          path: "referredToDoctor",
+          populate: {
+            path: "user",
+            select: "name email",
+          },
+        })
+        .populate("referredToHospital")
+
+      console.log("Referral status updated successfully:", populatedReferral)
+      res.json(populatedReferral)
     } else {
       res.status(401)
       throw new Error("Not authorized to update this referral")
@@ -289,6 +403,7 @@ export {
   getPatientReferrals,
   getReferringDoctorReferrals,
   getReferredDoctorReferrals,
+  getAllReferrals,
   getReferralById,
   updateReferralStatus,
   createAppointmentFromReferral,
