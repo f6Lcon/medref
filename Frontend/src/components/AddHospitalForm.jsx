@@ -254,7 +254,7 @@ const AddHospitalForm = ({ onSuccess }) => {
                 value={formData.address.city}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="New York"
+                placeholder="Nakuru"
                 required
               />
             </div>
@@ -270,7 +270,7 @@ const AddHospitalForm = ({ onSuccess }) => {
                 value={formData.address.state}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="NY"
+                placeholder="Costal"
                 required
               />
             </div>
@@ -286,7 +286,7 @@ const AddHospitalForm = ({ onSuccess }) => {
                 value={formData.address.zipCode}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="10001"
+                placeholder="60200"
                 required
               />
             </div>
@@ -302,7 +302,7 @@ const AddHospitalForm = ({ onSuccess }) => {
                 value={formData.address.country}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="United States"
+                placeholder="Kenya"
                 required
               />
             </div>
