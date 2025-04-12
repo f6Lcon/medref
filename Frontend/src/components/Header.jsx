@@ -31,7 +31,6 @@ const Header = () => {
   const getNavItems = () => {
     const commonItems = [
       { title: "Home", path: "/" },
-      { title: "Doctors", path: "/doctors" },
     ]
 
     if (!isLoggedIn) {

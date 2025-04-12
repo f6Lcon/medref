@@ -68,6 +68,19 @@ const AdminDashboard = () => {
 
       setUserData(userResponse.data)
 
+      // Fetch all users
+      try {
+        const usersResponse = await axios.get(`${API_URL}/api/users`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setUsers(usersResponse.data || [])
+      } catch (err) {
+        console.error("Error fetching users:", err)
+        // If the endpoint doesn't exist yet, we'll create a mock list from doctors and patients
+        const mockUsers = []
+        setUsers(mockUsers)
+      }
+
       // Fetch doctors
       let doctorsResponse
       try {
@@ -75,6 +88,19 @@ const AdminDashboard = () => {
           headers: { Authorization: `Bearer ${token}` },
         })
         setDoctors(doctorsResponse.data)
+
+        // Add doctors to mock users if needed
+        if (users.length === 0) {
+          doctorsResponse.data.forEach((doctor) => {
+            if (doctor.user) {
+              users.push({
+                ...doctor.user,
+                role: "doctor",
+                details: doctor,
+              })
+            }
+          })
+        }
       } catch (err) {
         console.error("Error fetching doctors:", err)
       }
@@ -86,6 +112,19 @@ const AdminDashboard = () => {
           headers: { Authorization: `Bearer ${token}` },
         })
         setPatients(patientsResponse.data)
+
+        // Add patients to mock users if needed
+        if (users.length === 0) {
+          patientsResponse.data.forEach((patient) => {
+            if (patient.user) {
+              users.push({
+                ...patient.user,
+                role: "patient",
+                details: patient,
+              })
+            }
+          })
+        }
       } catch (err) {
         console.error("Error fetching patients:", err)
       }
@@ -129,11 +168,11 @@ const AdminDashboard = () => {
 
       // Set statistics
       setStats({
-        totalPatients: patientsResponse.data.length,
-        totalDoctors: doctorsResponse.data.length,
-        totalAppointments: appointments.length || 3750, // Placeholder if we don't have real data
-        totalReferrals: referrals.length || 620, // Placeholder if we don't have real data
-        totalHospitals: hospitalsResponse.data.length,
+        totalPatients: patientsResponse?.data?.length || 0,
+        totalDoctors: doctorsResponse?.data?.length || 0,
+        totalAppointments: appointments.length || 0,
+        totalReferrals: referrals.length || 0,
+        totalHospitals: hospitalsResponse?.data?.length || 0,
       })
     } catch (err) {
       console.error("Error fetching data:", err)
@@ -532,56 +571,63 @@ const AdminDashboard = () => {
                 <button className="text-primary hover:underline text-sm font-medium">View All</button>
               </div>
               <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="bg-blue-100 p-2 rounded-full mr-3">
-                    <FaUserCircle className="text-blue-500" />
+                {appointments && appointments.length > 0 ? (
+                  appointments.slice(0, 3).map((appointment, index) => (
+                    <div key={appointment._id || `appointment-${index}`} className="flex items-start">
+                      <div className="bg-purple-100 p-2 rounded-full mr-3">
+                        <FaCalendarAlt className="text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Appointment scheduled</p>
+                        <p className="text-xs text-gray-500">
+                          Dr. {appointment.doctor?.user?.name || "Unknown"} has a new appointment with{" "}
+                          {appointment.patient?.user?.name || "Unknown Patient"}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {formatDate(appointment.date)} at {appointment.time}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-start">
+                    <div className="bg-purple-100 p-2 rounded-full mr-3">
+                      <FaCalendarAlt className="text-purple-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">No recent appointments</p>
+                      <p className="text-xs text-gray-500">There are no recent appointments in the system</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">New patient registered</p>
-                    <p className="text-xs text-gray-500">John Doe created an account</p>
-                    <p className="text-xs text-gray-400">2 hours ago</p>
+                )}
+
+                {referrals && referrals.length > 0 ? (
+                  referrals.slice(0, 2).map((referral, index) => (
+                    <div key={referral._id || `referral-${index}`} className="flex items-start">
+                      <div className="bg-yellow-100 p-2 rounded-full mr-3">
+                        <FaExchangeAlt className="text-yellow-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">New referral created</p>
+                        <p className="text-xs text-gray-500">
+                          Dr. {referral.referringDoctor?.user?.name || "Unknown"} referred a patient to Dr.{" "}
+                          {referral.referredToDoctor?.user?.name || "Unknown"}
+                        </p>
+                        <p className="text-xs text-gray-400">{formatDate(referral.createdAt || new Date())}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-start">
+                    <div className="bg-yellow-100 p-2 rounded-full mr-3">
+                      <FaExchangeAlt className="text-yellow-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">No recent referrals</p>
+                      <p className="text-xs text-gray-500">There are no recent referrals in the system</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="bg-green-100 p-2 rounded-full mr-3">
-                    <FaUserMd className="text-green-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">New doctor approved</p>
-                    <p className="text-xs text-gray-500">Dr. Sarah Johnson's account was approved</p>
-                    <p className="text-xs text-gray-400">5 hours ago</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="bg-purple-100 p-2 rounded-full mr-3">
-                    <FaCalendarAlt className="text-purple-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Appointment scheduled</p>
-                    <p className="text-xs text-gray-500">Dr. Williams has a new appointment with Mary Smith</p>
-                    <p className="text-xs text-gray-400">Yesterday at 3:45 PM</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="bg-yellow-100 p-2 rounded-full mr-3">
-                    <FaExchangeAlt className="text-yellow-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">New referral created</p>
-                    <p className="text-xs text-gray-500">Dr. Brown referred a patient to Dr. Taylor</p>
-                    <p className="text-xs text-gray-400">Yesterday at 11:20 AM</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="bg-red-100 p-2 rounded-full mr-3">
-                    <FaHospital className="text-red-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Hospital information updated</p>
-                    <p className="text-xs text-gray-500">Central Hospital updated their contact information</p>
-                    <p className="text-xs text-gray-400">2 days ago</p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -626,6 +672,118 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* User Management Tab */}
+        {activeTab === "users" && (
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-800">User Management</h2>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search users..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Username
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {doctors.map((doctor) => (
+                    <tr key={`doctor-${doctor._id}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <FaUserMd className="text-gray-500" size={20} />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              Dr. {doctor.user?.name || "Unknown"}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{doctor.email || doctor.user?.email}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{doctor.user?.username || "N/A"}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                          Doctor
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button className="text-primary hover:text-accent mr-3">
+                          <FaEdit /> Edit
+                        </button>
+                        <button className="text-red-600 hover:text-red-900">
+                          <FaTrash /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {patients.map((patient) => (
+                    <tr key={`patient-${patient._id}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <FaUserCircle className="text-gray-500" size={20} />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">{patient.user?.name || "Unknown"}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{patient.email || patient.user?.email}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{patient.user?.username || "N/A"}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          Patient
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button className="text-primary hover:text-accent mr-3">
+                          <FaEdit /> Edit
+                        </button>
+                        <button className="text-red-600 hover:text-red-900">
+                          <FaTrash /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

@@ -22,6 +22,7 @@ import AppointmentStatusUpdate from "./AppointmentStatusUpdate"
 import ReferralActions from "./ReferralActions"
 import CreateReferralForm from "./CreateReferralForm"
 import AppointmentFromReferral from "./AppointmentFromReferral"
+import MedicalRecordsList from "./MedicalRecordsList" // Import MedicalRecordsList
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
@@ -220,6 +221,14 @@ const DoctorDashboard = () => {
     )
   }
 
+  // Filter today's appointments for the overview card
+  const todaysAppointments = appointments.filter(
+    (apt) =>
+      new Date(apt.date).toDateString() === new Date().toDateString() &&
+      apt.status !== "cancelled" &&
+      apt.status !== "completed",
+  )
+
   return (
     <div className="min-h-screen bg-light flex flex-col md:flex-row">
       {/* Sidebar */}
@@ -385,7 +394,7 @@ const DoctorDashboard = () => {
                   View All
                 </button>
               </div>
-              {appointments.length > 0 ? (
+              {appointments && appointments.length > 0 ? (
                 <div className="space-y-4">
                   {appointments
                     .filter(
@@ -394,7 +403,7 @@ const DoctorDashboard = () => {
                         apt.status !== "cancelled" &&
                         apt.status !== "completed",
                     )
-                    .sort((a, b) => a.time.localeCompare(b.time))
+                    .sort((a, b) => a.time?.localeCompare(b.time) || 0)
                     .slice(0, 3)
                     .map((appointment) => (
                       <div key={appointment._id} className="border-l-4 border-primary pl-4 py-2">
@@ -563,7 +572,23 @@ const DoctorDashboard = () => {
                         </td>
                         <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{appointment.time}</td>
                         <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{appointment.reason}</td>
-                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">{appointment.status}</td>
+                        <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              appointment.status === "completed"
+                                ? "bg-green-100 text-green-800"
+                                : appointment.status === "scheduled"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : appointment.status === "cancelled"
+                                    ? "bg-red-100 text-red-800"
+                                    : appointment.status === "rescheduled"
+                                      ? "bg-purple-100 text-purple-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
+                            {appointment.status}
+                          </span>
+                        </td>
                         <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                           <AppointmentStatusUpdate
                             appointment={appointment}
@@ -652,7 +677,7 @@ const DoctorDashboard = () => {
             {showCreateReferralForm && (
               <div className="mb-4">
                 <CreateReferralForm
-                  onReferralSuccess={handleReferralSuccess}
+                  onSuccess={handleReferralSuccess}
                   onClose={() => setShowCreateReferralForm(false)}
                 />
               </div>
@@ -784,8 +809,30 @@ const DoctorDashboard = () => {
             <h2 className="text-lg font-semibold text-gray-800 mb-4">
               Medical Records for {selectedPatient.user?.name || "Patient"}
             </h2>
-            {/* Display medical records here - Placeholder */}
-            <p className="text-gray-500 text-sm">Medical records will be displayed here. This is a placeholder.</p>
+            <div className="mb-4">
+              <button
+                onClick={() => setSelectedPatient(null)}
+                className="bg-gray-200 text-gray-700 py-1 px-3 rounded-md hover:bg-gray-300 transition text-sm"
+              >
+                Back to Patient List
+              </button>
+            </div>
+            {/* Display medical records here */}
+            {selectedPatient._id && (
+              <div className="mt-4">
+                <MedicalRecordsList patientId={selectedPatient._id} isDoctor={true} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Medical Records Tab - No Patient Selected */}
+        {activeTab === "records" && !selectedPatient && (
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Medical Records</h2>
+            <p className="text-gray-500">
+              Please select a patient from the Patients tab to view their medical records.
+            </p>
           </div>
         )}
 

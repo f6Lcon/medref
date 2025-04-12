@@ -3,11 +3,12 @@ import {
   createAppointment,
   getPatientAppointments,
   getDoctorAppointments,
+  getAllAppointments,
   getAppointmentById,
   updateAppointmentStatus,
   cancelAppointment,
 } from "../controllers/appointment.controller.js"
-import { protect, doctor } from "../middleware/auth.middleware.js"
+import { protect, doctor, admin } from "../middleware/auth.middleware.js"
 
 const router = express.Router()
 
@@ -15,6 +16,7 @@ router.route("/").post(protect, createAppointment)
 
 router.get("/patient", protect, getPatientAppointments)
 router.get("/doctor", protect, doctor, getDoctorAppointments)
+router.get("/all", protect, admin, getAllAppointments)
 
 router.route("/:id").get(protect, getAppointmentById)
 

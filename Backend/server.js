@@ -14,10 +14,6 @@ import { notFound, errorHandler } from "./middleware/error.middleware.js"
 import path from "path"
 import { fileURLToPath } from "url"
 
-// Get the directory name
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
 dotenv.config()
 
 // Connect to database
@@ -29,7 +25,11 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-// Serve static files from the uploads directory
+// Get the directory name
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// Serve uploaded files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 
 // Routes

@@ -288,10 +288,10 @@ const PatientDashboard = () => {
                   View All
                 </button>
               </div>
-              {appointments.length > 0 ? (
+              {appointments && appointments.length > 0 ? (
                 <div className="space-y-4">
                   {appointments
-                    .filter((apt) => new Date(apt.date) >= new Date())
+                    .filter((apt) => new Date(apt.date) >= new Date() && apt.status !== "cancelled")
                     .sort((a, b) => new Date(a.date) - new Date(b.date))
                     .slice(0, 3)
                     .map((appointment) => (

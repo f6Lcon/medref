@@ -123,6 +123,37 @@ const getDoctorAppointments = asyncHandler(async (req, res) => {
   res.json(appointments)
 })
 
+// @desc    Get all appointments (admin only)
+// @route   GET /api/appointments/all
+// @access  Private/Admin
+const getAllAppointments = asyncHandler(async (req, res) => {
+  if (req.user.role !== "admin") {
+    res.status(401)
+    throw new Error("Not authorized to access all appointments")
+  }
+
+  const appointments = await Appointment.find({})
+    .populate({
+      path: "patient",
+      populate: {
+        path: "user",
+        select: "name email",
+      },
+    })
+    .populate({
+      path: "doctor",
+      populate: {
+        path: "user",
+        select: "name email",
+      },
+    })
+    .populate("hospital", "name address")
+    .populate("referral")
+    .sort({ date: -1 })
+
+  res.json(appointments)
+})
+
 // @desc    Get appointment by ID
 // @route   GET /api/appointments/:id
 // @access  Private
@@ -232,6 +263,7 @@ export {
   createAppointment,
   getPatientAppointments,
   getDoctorAppointments,
+  getAllAppointments,
   getAppointmentById,
   updateAppointmentStatus,
   cancelAppointment,

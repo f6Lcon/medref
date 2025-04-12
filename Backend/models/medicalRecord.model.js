@@ -16,20 +16,23 @@ const medicalRecordSchema = mongoose.Schema(
     },
     fileUrl: {
       type: String,
+      required: true,
     },
     fileType: {
       type: String,
+      required: true,
     },
     fileSize: {
       type: Number,
     },
-    uploadedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
     uploadDate: {
       type: Date,
       default: Date.now,
+    },
+    uploadedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     tags: [String],
   },

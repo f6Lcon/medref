@@ -37,6 +37,7 @@ const MedicalRecordUpload = ({ patientId, onUploadSuccess }) => {
 
     const fileType = file.type
     if (fileType.includes("pdf")) return <FaFilePdf size={24} className="text-red-500" />
+    if (fileType.includes("image")) return <FaFileImage size={24} className="text-red-500" />
     if (fileType.includes("image")) return <FaFileImage size={24} className="text-blue-500" />
     return <FaFileAlt size={24} className="text-gray-500" />
   }
