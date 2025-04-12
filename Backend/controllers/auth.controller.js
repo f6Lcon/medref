@@ -1,8 +1,11 @@
 import asyncHandler from "express-async-handler"
 import generateToken from "../utils/generateToken.js"
+import generateOTP from "../utils/generateOTP.js"
+import sendEmail from "../utils/sendEmail.js"
 import User from "../models/user.model.js"
 import Patient from "../models/patient.model.js"
 import Doctor from "../models/doctor.model.js"
+import OTP from "../models/otp.model.js"
 
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
@@ -23,6 +26,12 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   if (user && (await user.matchPassword(password))) {
+    // Check if user is verified
+    if (!user.isVerified) {
+      res.status(401)
+      throw new Error("Please verify your email address before logging in")
+    }
+
     res.json({
       _id: user._id,
       name: user.name,
@@ -63,27 +72,176 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Invalid role specified")
   }
 
+  // Create user with isVerified set to false
   const user = await User.create({
     name,
     username,
     email,
     password,
     role,
+    isVerified: false,
   })
 
   if (user) {
+    // Generate OTP
+    const otp = generateOTP()
+
+    // Save OTP to database
+    await OTP.create({
+      user: user._id,
+      email: user.email,
+      otp,
+    })
+
+    // Send verification email
+    const verificationEmailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <h2 style="color: #2c3e50; text-align: center;">Welcome to MEDREF</h2>
+        <p>Hello ${user.name},</p>
+        <p>Thank you for registering with MEDREF. To complete your registration, please use the following One-Time Password (OTP) to verify your email address:</p>
+        <div style="background-color: #f5f7fa; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
+          <h3 style="margin: 0; color: #3498db; font-size: 24px;">${otp}</h3>
+        </div>
+        <p>This OTP will expire in 1 hour.</p>
+        <p>If you did not register for a MEDREF account, please ignore this email.</p>
+        <p>Best regards,<br>The MEDREF Team</p>
+      </div>
+    `
+
+    await sendEmail({
+      email: user.email,
+      subject: "MEDREF - Email Verification",
+      html: verificationEmailHtml,
+    })
+
     res.status(201).json({
       _id: user._id,
       name: user.name,
       username: user.username,
       email: user.email,
       role: user.role,
-      token: generateToken(user._id),
+      isVerified: user.isVerified,
+      message: "Registration successful! Please check your email for verification OTP.",
     })
   } else {
     res.status(400)
     throw new Error("Invalid user data")
   }
+})
+
+// @desc    Verify user email with OTP
+// @route   POST /api/auth/verify
+// @access  Public
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body
+
+  if (!email || !otp) {
+    res.status(400)
+    throw new Error("Please provide email and OTP")
+  }
+
+  // Find the user by email
+  const user = await User.findOne({ email })
+  if (!user) {
+    res.status(404)
+    throw new Error("User not found")
+  }
+
+  // If user is already verified
+  if (user.isVerified) {
+    return res.json({
+      message: "Email already verified. Please login.",
+    })
+  }
+
+  // Find the OTP record
+  const otpRecord = await OTP.findOne({ user: user._id, email, otp })
+  if (!otpRecord) {
+    res.status(400)
+    throw new Error("Invalid or expired OTP")
+  }
+
+  // Verify the user
+  user.isVerified = true
+  await user.save()
+
+  // Delete the OTP record
+  await OTP.deleteOne({ _id: otpRecord._id })
+
+  res.json({
+    _id: user._id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    isVerified: user.isVerified,
+    token: generateToken(user._id),
+    message: "Email verified successfully! You can now log in.",
+  })
+})
+
+// @desc    Resend verification OTP
+// @route   POST /api/auth/resend-otp
+// @access  Public
+const resendOTP = asyncHandler(async (req, res) => {
+  const { email } = req.body
+
+  if (!email) {
+    res.status(400)
+    throw new Error("Please provide email")
+  }
+
+  // Find the user by email
+  const user = await User.findOne({ email })
+  if (!user) {
+    res.status(404)
+    throw new Error("User not found")
+  }
+
+  // If user is already verified
+  if (user.isVerified) {
+    return res.json({
+      message: "Email already verified. Please login.",
+    })
+  }
+
+  // Delete any existing OTP for this user
+  await OTP.deleteMany({ user: user._id })
+
+  // Generate new OTP
+  const otp = generateOTP()
+
+  // Save OTP to database
+  await OTP.create({
+    user: user._id,
+    email: user.email,
+    otp,
+  })
+
+  // Send verification email
+  const verificationEmailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+      <h2 style="color: #2c3e50; text-align: center;">MEDREF Email Verification</h2>
+      <p>Hello ${user.name},</p>
+      <p>You requested a new verification code. Please use the following One-Time Password (OTP) to verify your email address:</p>
+      <div style="background-color: #f5f7fa; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
+        <h3 style="margin: 0; color: #3498db; font-size: 24px;">${otp}</h3>
+      </div>
+      <p>This OTP will expire in 1 hour.</p>
+      <p>If you did not request this code, please ignore this email.</p>
+      <p>Best regards,<br>The MEDREF Team</p>
+    </div>
+  `
+
+  await sendEmail({
+    email: user.email,
+    subject: "MEDREF - New Verification Code",
+    html: verificationEmailHtml,
+  })
+
+  res.json({
+    message: "New verification code sent to your email.",
+  })
 })
 
 // @desc    Get user profile
@@ -99,6 +257,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
       username: user.username,
       email: user.email,
       role: user.role,
+      isVerified: user.isVerified,
     }
 
     // If user is a patient, get patient data
@@ -157,6 +316,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
       username: updatedUser.username,
       email: updatedUser.email,
       role: updatedUser.role,
+      isVerified: updatedUser.isVerified,
       token: generateToken(updatedUser._id),
     })
   } else {
@@ -165,4 +325,4 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   }
 })
 
-export { loginUser, registerUser, getUserProfile, updateUserProfile }
+export { loginUser, registerUser, verifyEmail, resendOTP, getUserProfile, updateUserProfile }

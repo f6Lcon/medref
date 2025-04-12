@@ -25,6 +25,7 @@ import Hospitals from "./components/Hospitals"
 import PatientDashboard from "./components/PatientDashboard"
 import DoctorDashboard from "./components/DoctorDashboard"
 import AdminDashboard from "./components/AdminDashboard"
+import EmailVerification from "./components/EmailVerification"
 
 function App() {
   const [doctors, setDoctors] = useState([
@@ -313,6 +314,7 @@ function App() {
               <Route path="/contact-us" element={<ContactUs />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/verify-email" element={<EmailVerification />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
