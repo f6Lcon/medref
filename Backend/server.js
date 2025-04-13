@@ -21,27 +21,11 @@ connectDB()
 
 const app = express()
 
-// CORS setup
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://medref-fy.vercel.app"
-]
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true)
-    } else {
-      callback(new Error("Not allowed by CORS"))
-    }
-  },
-  credentials: true
-}))
-
-// Body parser
+// Middleware
+app.use(cors())
 app.use(express.json())
 
-// Get directory path
+// Get the directory name
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -58,7 +42,7 @@ app.use("/api/referrals", referralRoutes)
 app.use("/api/admins", adminRoutes)
 app.use("/api/medical-records", medicalRecordRoutes)
 
-// Error handlers
+// Error handling middleware
 app.use(notFound)
 app.use(errorHandler)
 
