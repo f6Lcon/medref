@@ -114,6 +114,10 @@ const registerUser = asyncHandler(async (req, res) => {
       html: verificationEmailHtml,
     })
 
+    // Generate token for immediate use (even before verification)
+    // This allows the user to create their profile
+    const token = generateToken(user._id)
+
     res.status(201).json({
       _id: user._id,
       name: user.name,
@@ -121,6 +125,7 @@ const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       isVerified: user.isVerified,
+      token: token, // Include token in response
       message: "Registration successful! Please check your email for verification OTP.",
     })
   } else {
