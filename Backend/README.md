@@ -196,12 +196,16 @@ All protected routes require a **Bearer Token** (JWT) in the `Authorization` hea
 ## 📘 Example Usage (Frontend Devs)
 
 ### Login Request
+
 ```js
 fetch('/api/auth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email, password }),
 });
+```
+
+
 ```js
 fetch('/api/auth/profile', {
   headers: {
@@ -211,7 +215,7 @@ fetch('/api/auth/profile', {
 
 ```
 
-`
+
 ✅ Status Codes
 
     200 OK – Successful request
@@ -229,4 +233,3 @@ fetch('/api/auth/profile', {
     500 Internal Server Error – Server issue
 
 
-`
