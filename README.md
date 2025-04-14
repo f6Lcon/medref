@@ -1,134 +1,171 @@
-# Medical Referral Appointment System 
+# 🏥 Medical Referral Appointment System
 
-This is the FullStack app for the **Medical Referral Appointment System**, built with React, Node.js, Express, and MongoDB.
-
-## 🔗 Project Links
-
-- **LIVEWEBSITE:** [VERCEL - MRAS (MERN)](https://mras-final-year-dbyk.vercel.app/)
-- **Postman Collection:** [medical_referral_api.postman_collection.json](./medical_referral_api.postman_collection.json)
+A web-based platform built with the **MERN stack** that facilitates medical referrals and appointments between **patients**, **doctors**, and **hospitals**.
 
 ---
 
-## 🛠️ Technologies Used
+## 🚀 Features
 
-- React.js
-- Node.js
-- Express.js
-- MongoDB + Mongoose
-- JWT Authentication
-- Role-based Access Control
-- RESTful APIs
+- 👤 **User Roles**: Admin, Doctor, Patient
+- 📅 Appointments booking & management
+- 📄 Medical referrals with detailed history
+- 🏥 Hospital and doctor search
+- 🧾 Patient medical records upload and view
 
 ---
-
-## 🚀 Getting Started
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/initials101/mras_finalYear.git
-cd mras_finalYear
-
-1. cd Backend
-
-2. Install dependencies
-
-npm install
-
-3. Create a .env file
-
-Create a .env file in the root directory and add the following:
-
-PORT=8000
-MONGO_URI=mongodb://localhost:27017/medical_referral
-JWT_SECRET=your_jwt_secret
-NODE_ENV=development
-
-4. Start MongoDB
-
-Ensure MongoDB is running locally or use MongoDB Atlas and update the MONGO_URI.
-5. Run the application
-
-npm run dev
-
-The server will start on http://localhost:8000.
-📬 API Documentation
-
-6. cd Frontend
-
-7. install dependancies
-
-8. yarn
-
-9. npm run dev
-
-The frontend will run on http://localhost:5173.
-```
-
-
-
-## You can explore and test the API endpoints using the included Postman collection:
-
-    Open Postman
-
-    Click Import → Upload medical_referral_api.postman_collection.json
-
-    Test endpoints like:
-
-        Auth: /api/auth/register, /api/auth/login
-
-        Patients: /api/patients
-
-        Doctors: /api/doctors
-
-        Hospitals: /api/hospitals
-
-        Appointments: /api/appointments
-
-        Referrals: /api/referrals
-
-## 📝 Scripts
-
-npm run dev        # Run in development mode using nodemon
-npm start          # Run the server in production
-
-## 📁 Folder Structure
-`
-mras_finalYear/
-├── controllers/
-├── middleware/
-├── models/
-├── routes/
-├── utils/
-├── .env
-├── server.js
-├── README.md
-└── medical_referral_api.postman_collection.json
-`
 
 ## 📸 Screenshots
 
-### 🛠️ Admin Dashboard
-Manage hospitals and users.
+### 🛠️ Admin Dashboard  
+_Manage hospitals and users_  
 ![Admin Dashboard](./screenshots/admin-dashboard.png)
 
 ---
 
-### 🩺 Doctor Dashboard
-View and create referrals, manage appointments.
+### 🩺 Doctor Dashboard  
+_View/create referrals and manage appointments_  
 ![Doctor Dashboard](./screenshots/doctor-dashboard.png)
 
 ---
 
-### 👤 Patient Dashboard
-View doctors and book appointments.
+### 👤 Patient Dashboard  
+_View doctors and book appointments_  
 ![Patient Dashboard](./screenshots/patient-dashboard.png)
 
+---
 
-## 🧪 Testing
+## 📡 API Endpoints
 
-You can use Postman, Insomnia, or your frontend app to test API functionality.
-##  🤝 Contributing
+### 🔐 Authentication
 
-Pull requests are welcome. For major changes, open an issue first to discuss what you would like to change.
+- `POST /api/auth/register` — Register user  
+- `POST /api/auth/login` — Login  
+- `POST /api/auth/verify` — Verify email with OTP  
+- `POST /api/auth/resend-otp` — Resend OTP  
+- `GET /api/auth/profile` — Get profile  
+- `PUT /api/auth/profile` — Update profile
+
+---
+
+### 👥 User Management (Admin Only)
+
+- `GET /api/users` — All users  
+- `GET /api/users/:id` — User by ID  
+- `PUT /api/users/:id` — Update user  
+- `DELETE /api/users/:id` — Delete user
+
+---
+
+### 🧑‍⚕️ Doctor
+
+- `POST /api/doctors` — Create doctor profile  
+- `GET /api/doctors/profile` — Get profile  
+- `PUT /api/doctors/profile` — Update profile  
+- `GET /api/doctors` — All doctors  
+- `GET /api/doctors/:id` — Doctor by ID  
+- `GET /api/doctors/specialization/:specialization` — Filter by specialization  
+- `GET /api/doctors/hospital/:hospitalId` — Filter by hospital
+
+---
+
+### 🧑‍🤝‍🧑 Patient
+
+- `POST /api/patients` — Create patient profile  
+- `GET /api/patients/profile` — Get profile  
+- `PUT /api/patients/profile` — Update profile  
+- `GET /api/patients` — All patients  
+- `GET /api/patients/:id` — Patient by ID
+
+---
+
+### 🏥 Hospitals
+
+- `POST /api/hospitals` — Create hospital  
+- `GET /api/hospitals` — All hospitals  
+- `GET /api/hospitals/:id` — Hospital by ID  
+- `PUT /api/hospitals/:id` — Update hospital  
+- `DELETE /api/hospitals/:id` — Delete hospital  
+- `GET /api/hospitals/search` — Search hospitals by keyword
+
+---
+
+### 📅 Appointments
+
+- `POST /api/appointments` — Create appointment  
+- `GET /api/appointments/patient` — Patient’s appointments  
+- `GET /api/appointments/doctor` — Doctor’s appointments  
+- `GET /api/appointments/all` — All appointments (Admin)  
+- `GET /api/appointments/:id` — Appointment by ID  
+- `PUT /api/appointments/:id/status` — Update status  
+- `PUT /api/appointments/:id/cancel` — Cancel appointment
+
+---
+
+### 🔁 Referrals
+
+- `POST /api/referrals` — Create referral  
+- `GET /api/referrals/patient` — Patient referrals  
+- `GET /api/referrals/referring` — Doctor-sent referrals  
+- `GET /api/referrals/referred` — Incoming referrals  
+- `GET /api/referrals/all` — All referrals (Admin)  
+- `GET /api/referrals/:id` — Referral by ID  
+- `PUT /api/referrals/:id/status` — Update referral status  
+- `POST /api/referrals/:id/appointment` — Create appointment from referral
+
+---
+
+### 🧾 Medical Records
+
+- `POST /api/medical-records/upload` — Upload medical record  
+- `GET /api/medical-records/patient/:patientId` — Records by patient  
+- `GET /api/medical-records/:id` — Record by ID  
+- `GET /api/medical-records/download/:id` — Download  
+- `DELETE /api/medical-records/:id` — Delete record
+
+---
+
+### 🧑‍💼 Admin
+
+- `POST /api/admins` — Create admin profile  
+- `GET /api/admins/profile` — Get admin profile  
+- `PUT /api/admins/profile` — Update profile  
+- `GET /api/admin/db-stats` — View DB stats
+
+---
+
+## ⚙️ Tech Stack
+
+- **Frontend**: React + Tailwind + Redux + Framer Motion
+- **Backend**: Node.js + Express
+- **Database**: MongoDB
+- **Authentication**: JWT
+- **Deployment**: Docker, Render/AWS (optional)
+
+---
+
+## 🛠️ Setup Instructions
+
+1. Clone the repo  
+   `git clone https://github.com/your-username/your-repo.git`
+
+2. Install dependencies  
+   `npm install` (both frontend & backend)
+
+3. Configure `.env` files for backend and frontend
+
+4. Start servers  
+   Backend: `npm run dev`  
+   Frontend: `npm run dev`
+
+---
+
+## 🙌 Contributing
+
+Pull requests are welcome. Open an issue first to discuss changes or features.
+
+---
+
+## 📄 License
+
+MIT License — Free for personal and commercial use.
 
