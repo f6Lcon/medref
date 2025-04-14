@@ -161,7 +161,7 @@ Click to expand full documentation:
 - **Backend**: Node.js, Express.js  
 - **Database**: MongoDB Atlas  
 - **Authentication**: JWT, OTP via email  
-- **Deployment**: Docker, Render, or AWS  
+- **Deployment**: Vercel 
 
 ---
 
