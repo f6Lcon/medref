@@ -7,6 +7,8 @@ import { Link, useNavigate } from "react-router-dom"
 import PasswordStrengthBar from "react-password-strength-bar"
 import axios from "axios"
 
+const API_URL = "http://localhost:5000"
+
 const SignUp = () => {
   const [formData, setFormData] = useState({
     fullName: "",
@@ -85,7 +87,7 @@ const SignUp = () => {
 
       console.log("Registering user with data:", userData)
 
-      const response = await axios.post("http://localhost:5000/api/auth/register", userData, {
+      const response = await axios.post(`${API_URL}/api/auth/register`, userData, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -93,97 +95,28 @@ const SignUp = () => {
 
       console.log("User registered successfully:", response.data)
 
-      // Get the token from the response
-      const token = response.data.token
-
-      // Store token in localStorage
-      localStorage.setItem("token", token)
-      localStorage.setItem("userRole", response.data.role)
-
-      // Step 2: Create profile based on role
-      if (formData.role === "doctor") {
-        // Create doctor profile
-        const doctorData = {
-          specialization: formData.specialization,
-          licenseNumber: formData.licenseNumber,
-          email: formData.email, // Explicitly include email
-          contactInfo: {
-            phone: formData.phoneNumber,
-            email: formData.email,
-          },
-        }
-
-        console.log("Creating doctor profile with data:", doctorData)
-
-        await axios.post("http://localhost:5000/api/doctors", doctorData, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        // Redirect to doctor dashboard
-        window.location.href = "/doctor-dashboard"
-      } else if (formData.role === "admin") {
-        // Verify admin code (in a real app, this would be validated on the server)
-        if (formData.adminCode !== "ADMIN123") {
-          // Replace with your actual admin code verification
-          setError("Invalid administrator code")
-          setLoading(false)
-          return
-        }
-
-        // Create admin profile
-        const adminData = {
-          department: formData.department,
-          email: formData.email, // Explicitly include email
-          contactInfo: {
-            phone: formData.phoneNumber,
-            email: formData.email,
-          },
-        }
-
-        console.log("Creating admin profile with data:", adminData)
-
-        await axios.post("http://localhost:5000/api/admins", adminData, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        // Redirect to admin dashboard
-        window.location.href = "/admin-dashboard"
-      } else {
-        // Create patient profile with complete address and email
-        const patientData = {
-          email: formData.email, // Explicitly include email
-          dateOfBirth: formData.dateOfBirth,
-          gender: formData.gender,
-          phoneNumber: formData.phoneNumber,
-          address: {
-            street: formData.street,
-            city: formData.city,
-            state: formData.state,
-            zipCode: formData.zipCode,
-            country: formData.country,
-          },
-        }
-
-        console.log("Creating patient profile with data:", patientData)
-
-        await axios.post("http://localhost:5000/api/patients", patientData, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        // Redirect to patient dashboard
-        window.location.href = "/patient-dashboard"
+      // Store profile data in sessionStorage for use after email verification
+      const profileData = {
+        role: formData.role,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        street: formData.street,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        country: formData.country,
+        specialization: formData.specialization,
+        licenseNumber: formData.licenseNumber,
+        department: formData.department,
       }
 
-      alert("Registration successful!")
+      // Save profile data to sessionStorage
+      sessionStorage.setItem("pendingProfileData", JSON.stringify(profileData))
+
+      // Navigate to email verification page with email in state
+      navigate("/verify-email", { state: { email: formData.email } })
     } catch (error) {
       console.error("Error during registration:", error.response?.data || error.message)
       setError(error.response?.data?.message || "Registration failed. Please try again.")
@@ -191,9 +124,6 @@ const SignUp = () => {
       setLoading(false)
     }
   }
-
-  // Rest of the component remains the same...
-  // (renderFormStep function and return statement)
 
   return (
     <div className="bg-light min-h-screen flex items-center justify-center p-4">
