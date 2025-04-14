@@ -173,3 +173,35 @@ Click to expand full documentation:
 
 ```bash
 git clone https://github.com/your-username/your-project.git
+
+2. Install Dependencies
+
+cd backend && npm install
+cd ../frontend && npm install
+
+3. Configure Environment Variables
+
+Create .env files for both backend and frontend with your secrets.
+4. Run the Project
+
+# Backend
+cd backend
+npm run dev
+
+# Frontend
+cd ../frontend
+npm run dev
+
+🤝 Contributing
+
+We welcome all contributions! Please follow the steps below:
+
+    Fork the repository
+
+    Create a new branch git checkout -b feature-name
+
+    Commit your changes
+
+    Push to your fork
+
+    Submit a Pull Request
