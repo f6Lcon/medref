@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { FaUser, FaEnvelope, FaLock, FaPhoneAlt, FaCalendarAlt, FaIdCard, FaMapMarkerAlt } from "react-icons/fa"
 import { Link, useNavigate } from "react-router-dom"
@@ -28,6 +28,7 @@ const SignUp = () => {
     // Doctor specific fields
     licenseNumber: "",
     specialization: "",
+    hospital: "",
     // Admin specific fields
     adminCode: "",
     department: "",
@@ -37,6 +38,25 @@ const SignUp = () => {
   const [error, setError] = useState("")
   const [step, setStep] = useState(1) // For multi-step form
   const navigate = useNavigate()
+
+  const [hospitals, setHospitals] = useState([])
+
+  useEffect(() => {
+    // Fetch hospitals for doctor registration
+    const fetchHospitals = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/api/hospitals`)
+        setHospitals(response.data)
+      } catch (error) {
+        console.error("Error fetching hospitals:", error)
+      }
+    }
+
+    // Only fetch hospitals if the user is registering as a doctor and reaches step 3
+    if (formData.role === "doctor" && step === 3) {
+      fetchHospitals()
+    }
+  }, [formData.role, step])
 
   // Generate a username suggestion based on email
   const generateUsername = (email) => {
@@ -95,10 +115,10 @@ const SignUp = () => {
 
       console.log("User registered successfully:", response.data)
 
-      // Store profile data in sessionStorage for use after email verification
+      // Store profile data in sessionStorage for later use after email verification
       const profileData = {
-        role: formData.role,
         email: formData.email,
+        role: userData.role,
         phoneNumber: formData.phoneNumber,
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
@@ -109,18 +129,22 @@ const SignUp = () => {
         country: formData.country,
         specialization: formData.specialization,
         licenseNumber: formData.licenseNumber,
+        hospital: formData.hospital,
         department: formData.department,
+        adminCode: formData.adminCode,
       }
 
-      // Save profile data to sessionStorage
+      // Store profile data in sessionStorage
       sessionStorage.setItem("pendingProfileData", JSON.stringify(profileData))
 
-      // Navigate to email verification page with email in state
+      // Store email in localStorage for verification page
+      localStorage.setItem("pendingVerificationEmail", formData.email)
+
+      // Navigate to email verification page
       navigate("/verify-email", { state: { email: formData.email } })
     } catch (error) {
       console.error("Error during registration:", error.response?.data || error.message)
       setError(error.response?.data?.message || "Registration failed. Please try again.")
-    } finally {
       setLoading(false)
     }
   }
@@ -494,6 +518,27 @@ const SignUp = () => {
                   placeholder="Your medical license number"
                   required
                 />
+              </div>
+
+              <div>
+                <label htmlFor="hospital" className="block text-sm font-medium text-gray-700 mb-1">
+                  Hospital
+                </label>
+                <select
+                  id="hospital"
+                  name="hospital"
+                  value={formData.hospital}
+                  onChange={handleChange}
+                  className="pl-4 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
+                  required
+                >
+                  <option value="">Select your hospital</option>
+                  {hospitals.map((hospital) => (
+                    <option key={hospital._id} value={hospital._id}>
+                      {hospital.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex space-x-3">

@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useContext } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import axios from "axios"
 import { motion } from "framer-motion"
 import { FaEnvelope, FaCheck } from "react-icons/fa"
+import LoginContext from "../context/LoginContext"
 
 const API_URL = "http://localhost:5000"
 
@@ -19,12 +20,19 @@ const EmailVerification = () => {
 
   const location = useLocation()
   const navigate = useNavigate()
-  const email = location.state?.email || ""
+  const { setIsLoggedIn, setUserRole } = useContext(LoginContext)
+
+  // Get email from location state or localStorage
+  const email = location.state?.email || localStorage.getItem("pendingVerificationEmail") || ""
 
   useEffect(() => {
     if (!email) {
       navigate("/signup")
+      return
     }
+
+    // Store email in localStorage for persistence
+    localStorage.setItem("pendingVerificationEmail", email)
 
     // Countdown timer for resend button
     if (countdown > 0) {
@@ -96,107 +104,118 @@ const EmailVerification = () => {
       setSuccess(true)
       setRedirecting(true)
 
-      // Get the profile data stored during signup
-      const profileData = JSON.parse(sessionStorage.getItem("pendingProfileData") || "{}")
+      // Get the token and role from the response
       const token = response.data.token
-      const role = response.data.role || profileData.role
+      const role = response.data.role
 
-      // Store token in localStorage
+      if (!token) {
+        setError("Verification successful, but no token received. Please try logging in.")
+        setLoading(false)
+        setTimeout(() => {
+          navigate("/login")
+        }, 2000)
+        return
+      }
+
+      // Store token and user role in localStorage
       localStorage.setItem("token", token)
       localStorage.setItem("userRole", role)
 
-      // Create profile based on role
-      try {
-        if (role === "doctor") {
-          // Create doctor profile
-          const doctorData = {
-            specialization: profileData.specialization,
-            licenseNumber: profileData.licenseNumber,
-            email: profileData.email,
-            contactInfo: {
-              phone: profileData.phoneNumber,
-              email: profileData.email,
-            },
-          }
+      // Remove pending verification email
+      localStorage.removeItem("pendingVerificationEmail")
 
-          await axios.post(`${API_URL}/api/doctors`, doctorData, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          })
+      // Update context
+      setIsLoggedIn(true)
+      setUserRole(role)
+
+      // Get profile data from sessionStorage if it exists
+      const profileDataString = sessionStorage.getItem("pendingProfileData")
+
+      if (profileDataString) {
+        try {
+          const profileData = JSON.parse(profileDataString)
+
+          // Create profile based on role
+          if (role === "doctor") {
+            // Create doctor profile
+            const doctorData = {
+              specialization: profileData.specialization,
+              licenseNumber: profileData.licenseNumber,
+              hospital: profileData.hospital, // Add hospital field
+              email: profileData.email || email,
+              contactInfo: {
+                phone: profileData.phoneNumber,
+                email: profileData.email || email,
+              },
+            }
+
+            await axios.post(`${API_URL}/api/doctors`, doctorData, {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            })
+          } else if (role === "admin") {
+            // Create admin profile
+            const adminData = {
+              department: profileData.department,
+              email: profileData.email || email,
+              contactInfo: {
+                phone: profileData.phoneNumber,
+                email: profileData.email || email,
+              },
+            }
+
+            await axios.post(`${API_URL}/api/admins`, adminData, {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            })
+          } else if (role === "patient") {
+            // Create patient profile
+            const patientData = {
+              email: profileData.email || email,
+              dateOfBirth: profileData.dateOfBirth,
+              gender: profileData.gender,
+              phoneNumber: profileData.phoneNumber,
+              address: {
+                street: profileData.street,
+                city: profileData.city,
+                state: profileData.state,
+                zipCode: profileData.zipCode,
+                country: profileData.country,
+              },
+            }
+
+            await axios.post(`${API_URL}/api/patients`, patientData, {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            })
+          }
 
           // Clear stored data
           sessionStorage.removeItem("pendingProfileData")
-
-          // Redirect to doctor dashboard after a short delay
-          setTimeout(() => {
-            window.location.href = "/doctor-dashboard"
-          }, 1500)
-        } else if (role === "admin") {
-          // Create admin profile
-          const adminData = {
-            department: profileData.department,
-            email: profileData.email,
-            contactInfo: {
-              phone: profileData.phoneNumber,
-              email: profileData.email,
-            },
-          }
-
-          await axios.post(`${API_URL}/api/admins`, adminData, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          })
-
-          // Clear stored data
-          sessionStorage.removeItem("pendingProfileData")
-
-          // Redirect to admin dashboard after a short delay
-          setTimeout(() => {
-            window.location.href = "/admin-dashboard"
-          }, 1500)
-        } else {
-          // Create patient profile
-          const patientData = {
-            email: profileData.email,
-            dateOfBirth: profileData.dateOfBirth,
-            gender: profileData.gender,
-            phoneNumber: profileData.phoneNumber,
-            address: {
-              street: profileData.street,
-              city: profileData.city,
-              state: profileData.state,
-              zipCode: profileData.zipCode,
-              country: profileData.country,
-            },
-          }
-
-          await axios.post(`${API_URL}/api/patients`, patientData, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          })
-
-          // Clear stored data
-          sessionStorage.removeItem("pendingProfileData")
-
-          // Redirect to patient dashboard after a short delay
-          setTimeout(() => {
-            window.location.href = "/patient-dashboard"
-          }, 1500)
+        } catch (profileError) {
+          console.error("Error creating profile:", profileError)
+          // Continue with redirection even if profile creation fails
         }
-      } catch (profileError) {
-        console.error("Error creating profile:", profileError)
-        // Even if profile creation fails, redirect to dashboard
-        setTimeout(() => {
-          window.location.href =
-            role === "doctor" ? "/doctor-dashboard" : role === "admin" ? "/admin-dashboard" : "/patient-dashboard"
-        }, 1500)
       }
+
+      // Redirect based on user role after a short delay
+      setTimeout(() => {
+        if (role === "doctor") {
+          window.location.href = "/doctor-dashboard"
+        } else if (role === "patient") {
+          window.location.href = "/patient-dashboard"
+        } else if (role === "admin") {
+          window.location.href = "/admin-dashboard"
+        } else {
+          window.location.href = "/"
+        }
+      }, 1500)
     } catch (error) {
       console.error("Verification error:", error.response?.data || error.message)
       setError(error.response?.data?.message || "Verification failed. Please try again.")
@@ -238,6 +257,12 @@ const EmailVerification = () => {
             <p className="text-gray-600 mb-4">
               Your email has been successfully verified. {redirecting ? "Redirecting you to your dashboard..." : ""}
             </p>
+            {/* Loading spinner for redirection */}
+            {redirecting && (
+              <div className="flex justify-center mt-4">
+                <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
           </div>
         ) : (
           <>

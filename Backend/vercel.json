@@ -1,15 +1,11 @@
 {
-  "version": 2,
   "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node"
-    }
+    { "src": "Backend/api/**/*.js", "use": "@vercel/node" }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "server.js"
+  "functions": {
+    "Backend/api/**/*.js": {
+      "includeFiles": ["node_modules/**"]
     }
-  ]
+  },
+  "rootDirectory": "Backend"
 }
