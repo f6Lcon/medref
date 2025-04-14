@@ -3,7 +3,7 @@
 A full-stack MERN (MongoDB, Express, React, Node.js) application that enables seamless patient referrals, hospital management, and appointment scheduling.
 
 <p align="center">
-  <img src="https://your-hosted-image.com/banner.png" alt="Banner" width="100%">
+  <img src="Frontend/src/assets/logo.svg" alt="Banner" width="100%">
 </p>
 
 ---
