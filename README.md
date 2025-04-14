@@ -3,7 +3,7 @@
 A full-stack MERN (MongoDB, Express, React, Node.js) application that enables seamless patient referrals, hospital management, and appointment scheduling.
 
 <p align="center">
-  <img src="Frontend/src/assets/logo.svg" alt="Banner" width="100%">
+  <img src="Frontend/src/assets/logo.svg" alt="Banner" width="110" height="110">
 </p>
 
 ---
@@ -22,35 +22,33 @@ A full-stack MERN (MongoDB, Express, React, Node.js) application that enables se
 
 ## ✨ Features
 
-- 🧑‍⚕️ Role-based system for Admins, Doctors, and Patients
-- 🏥 Manage hospitals and doctor availability
-- 📅 Book, update, and cancel appointments
-- 🔁 Refer patients between hospitals/doctors
-- 🩺 View and upload medical records
-- 🔒 JWT authentication with OTP email verification
-- 📊 Admin dashboard for insights and stats
+- 🧑‍⚕️ Role-based system for Admins, Doctors, and Patients  
+- 🏥 Manage hospitals and doctor availability  
+- 📅 Book, update, and cancel appointments  
+- 🔁 Refer patients between hospitals/doctors  
+- 🩺 View and upload medical records  
+- 🔒 JWT authentication with OTP email verification  
+- 📊 Admin dashboard for insights and stats  
 
 ---
 
 ## 📸 Screenshots
 
-> Upload your screenshots inside a `screenshots/` folder or link from Imgur/GitHub Issues/CDN
-
 ### 🛠️ Admin Dashboard  
 _Manage hospitals and users_  
-[![Admin Screenshot](https://your-hosted-image.com/admin-thumb.png)](https://your-hosted-image.com/admin-dashboard.png)
+[![Admin Screenshot](screenshots/admin-thumb.png)](screenshots/admin-dashboard.png)
 
 ---
 
 ### 🩺 Doctor Dashboard  
 _Create and view referrals and appointments_  
-[![Doctor Screenshot](https://your-hosted-image.com/doctor-thumb.png)](https://your-hosted-image.com/doctor-dashboard.png)
+[![Doctor Screenshot](screenshots/doctor-thumb.png)](screenshots/doctor-dashboard.png)
 
 ---
 
 ### 👤 Patient Dashboard  
 _Search doctors, view hospitals, and book appointments_  
-[![Patient Screenshot](https://your-hosted-image.com/patient-thumb.png)](https://your-hosted-image.com/patient-dashboard.png)
+[![Patient Screenshot](screenshots/patient-thumb.png)](screenshots/patient-dashboard.png)
 
 ---
 
@@ -159,11 +157,11 @@ Click to expand full documentation:
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React, Tailwind CSS, Redux, Framer Motion
-- **Backend**: Node.js, Express.js
-- **Database**: MongoDB Atlas
-- **Authentication**: JWT, OTP via email
-- **Deployment**: Docker, Render, or AWS
+- **Frontend**: React, Tailwind CSS, Redux, Framer Motion  
+- **Backend**: Node.js, Express.js  
+- **Database**: MongoDB Atlas  
+- **Authentication**: JWT, OTP via email  
+- **Deployment**: Docker, Render, or AWS  
 
 ---
 
@@ -181,7 +179,7 @@ cd ../frontend && npm install
 
 3. Configure Environment Variables
 
-Create .env files for both backend and frontend with your secrets.
+Create .env files in both the backend and frontend directories with your environment-specific variables.
 4. Run the Project
 
 # Backend
@@ -194,14 +192,18 @@ npm run dev
 
 🤝 Contributing
 
-We welcome all contributions! Please follow the steps below:
+We welcome all contributions! Follow these steps:
 
     Fork the repository
 
-    Create a new branch git checkout -b feature-name
+    Create a new branch: git checkout -b feature-name
 
-    Commit your changes
+    Make and commit your changes
 
     Push to your fork
 
     Submit a Pull Request
+
+📄 License
+
+This project is licensed under the MIT License.
