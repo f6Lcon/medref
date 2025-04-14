@@ -22,11 +22,18 @@ import {
   FaEdit,
   FaTrash,
   FaTimes,
+  FaSync,
+  FaServer,
+  FaTable,
+  FaKey,
+  FaExclamationTriangle,
 } from "react-icons/fa"
 import LoginContext from "../context/LoginContext"
 import AddHospitalForm from "./AddHospitalForm"
 import AddDoctorForm from "./AddDoctorForm"
 import ReportGenerator from "./ReportGenerator"
+import EditUserModal from "./EditUserModal"
+import DeleteConfirmationModal from "./DeleteConfirmationModal"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
@@ -49,6 +56,16 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [showAddDoctorForm, setShowAddDoctorForm] = useState(false)
+  const [showEditUserModal, setShowEditUserModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [dbStats, setDbStats] = useState({
+    collections: 0,
+    documents: 0,
+    size: "0 MB",
+    indexes: 0,
+  })
+  const [refreshing, setRefreshing] = useState(false)
   const navigate = useNavigate()
   const { setIsLoggedIn, setUserRole } = useContext(LoginContext)
 
@@ -166,6 +183,30 @@ const AdminDashboard = () => {
         setReferrals([])
       }
 
+      // Fetch database stats
+      try {
+        const dbStatsResponse = await axios.get(`${API_URL}/api/admin/db-stats`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setDbStats(
+          dbStatsResponse.data || {
+            collections: 8,
+            documents: 120,
+            size: "24.5 MB",
+            indexes: 16,
+          },
+        )
+      } catch (err) {
+        console.error("Error fetching database stats:", err)
+        // Set mock database stats
+        setDbStats({
+          collections: 8,
+          documents: 120,
+          size: "24.5 MB",
+          indexes: 16,
+        })
+      }
+
       // Set statistics
       setStats({
         totalPatients: patientsResponse?.data?.length || 0,
@@ -186,6 +227,7 @@ const AdminDashboard = () => {
       }
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -294,7 +336,79 @@ const AdminDashboard = () => {
     }
   }
 
-  if (loading) {
+  const handleEditUser = (user) => {
+    setSelectedUser(user)
+    setShowEditUserModal(true)
+  }
+
+  const handleDeleteUser = (user) => {
+    setSelectedUser(user)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDeleteUser = async () => {
+    if (!selectedUser) return
+
+    try {
+      const token = localStorage.getItem("token")
+      await axios.delete(`${API_URL}/api/users/${selectedUser._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      // Remove user from the list
+      setUsers(users.filter((user) => user._id !== selectedUser._id))
+
+      // If the user was a doctor or patient, remove them from those lists too
+      if (selectedUser.role === "doctor") {
+        setDoctors(doctors.filter((doctor) => doctor.user?._id !== selectedUser._id))
+      } else if (selectedUser.role === "patient") {
+        setPatients(patients.filter((patient) => patient.user?._id !== selectedUser._id))
+      }
+
+      setShowDeleteModal(false)
+      setSelectedUser(null)
+      alert("User deleted successfully!")
+    } catch (err) {
+      console.error("Error deleting user:", err)
+      alert("Failed to delete user. Please try again.")
+    }
+  }
+
+  const handleUserUpdate = (updatedUser) => {
+    // Update the user in the users list
+    setUsers(users.map((user) => (user._id === updatedUser._id ? updatedUser : user)))
+
+    // If the user is a doctor or patient, update them in those lists too
+    if (updatedUser.role === "doctor") {
+      setDoctors(
+        doctors.map((doctor) => {
+          if (doctor.user?._id === updatedUser._id) {
+            return { ...doctor, user: updatedUser }
+          }
+          return doctor
+        }),
+      )
+    } else if (updatedUser.role === "patient") {
+      setPatients(
+        patients.map((patient) => {
+          if (patient.user?._id === updatedUser._id) {
+            return { ...patient, user: updatedUser }
+          }
+          return patient
+        }),
+      )
+    }
+
+    setShowEditUserModal(false)
+    setSelectedUser(null)
+  }
+
+  const refreshData = () => {
+    setRefreshing(true)
+    fetchData()
+  }
+
+  if (loading && !refreshing) {
     return (
       <div className="min-h-screen bg-light flex items-center justify-center">
         <div className="text-center">
@@ -461,6 +575,13 @@ const AdminDashboard = () => {
           </div>
 
           <div className="mt-4 md:mt-0 flex space-x-2">
+            <button
+              onClick={refreshData}
+              className="flex items-center space-x-2 bg-white p-2 rounded-md shadow-sm"
+              disabled={refreshing}
+            >
+              <FaSync className={`text-gray-400 ${refreshing ? "animate-spin" : ""}`} />
+            </button>
             <button className="flex items-center space-x-2 bg-white p-2 rounded-md shadow-sm">
               <FaBell className="text-gray-400" />
               <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -571,63 +692,39 @@ const AdminDashboard = () => {
                 <button className="text-primary hover:underline text-sm font-medium">View All</button>
               </div>
               <div className="space-y-4">
-                {appointments && appointments.length > 0 ? (
-                  appointments.slice(0, 3).map((appointment, index) => (
-                    <div key={appointment._id || `appointment-${index}`} className="flex items-start">
-                      <div className="bg-purple-100 p-2 rounded-full mr-3">
-                        <FaCalendarAlt className="text-purple-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Appointment scheduled</p>
-                        <p className="text-xs text-gray-500">
-                          Dr. {appointment.doctor?.user?.name || "Unknown"} has a new appointment with{" "}
-                          {appointment.patient?.user?.name || "Unknown Patient"}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {formatDate(appointment.date)} at {appointment.time}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex items-start">
+                {appointments.slice(0, 3).map((appointment, index) => (
+                  <div key={appointment._id || index} className="flex items-start">
                     <div className="bg-purple-100 p-2 rounded-full mr-3">
                       <FaCalendarAlt className="text-purple-500" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">No recent appointments</p>
-                      <p className="text-xs text-gray-500">There are no recent appointments in the system</p>
+                      <p className="text-sm font-medium">Appointment scheduled</p>
+                      <p className="text-xs text-gray-500">
+                        Dr. {appointment.doctor?.user?.name || "Unknown"} has a new appointment with{" "}
+                        {appointment.patient?.user?.name || "Unknown Patient"}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {formatDate(appointment.date)} at {appointment.time}
+                      </p>
                     </div>
                   </div>
-                )}
+                ))}
 
-                {referrals && referrals.length > 0 ? (
-                  referrals.slice(0, 2).map((referral, index) => (
-                    <div key={referral._id || `referral-${index}`} className="flex items-start">
-                      <div className="bg-yellow-100 p-2 rounded-full mr-3">
-                        <FaExchangeAlt className="text-yellow-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">New referral created</p>
-                        <p className="text-xs text-gray-500">
-                          Dr. {referral.referringDoctor?.user?.name || "Unknown"} referred a patient to Dr.{" "}
-                          {referral.referredToDoctor?.user?.name || "Unknown"}
-                        </p>
-                        <p className="text-xs text-gray-400">{formatDate(referral.createdAt || new Date())}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex items-start">
+                {referrals.slice(0, 2).map((referral, index) => (
+                  <div key={referral._id || index} className="flex items-start">
                     <div className="bg-yellow-100 p-2 rounded-full mr-3">
                       <FaExchangeAlt className="text-yellow-500" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">No recent referrals</p>
-                      <p className="text-xs text-gray-500">There are no recent referrals in the system</p>
+                      <p className="text-sm font-medium">New referral created</p>
+                      <p className="text-xs text-gray-500">
+                        Dr. {referral.referringDoctor?.user?.name || "Unknown"} referred a patient to Dr.{" "}
+                        {referral.referredToDoctor?.user?.name || "Unknown"}
+                      </p>
+                      <p className="text-xs text-gray-400">{formatDate(referral.createdAt || new Date())}</p>
                     </div>
                   </div>
-                )}
+                ))}
               </div>
             </div>
 
@@ -739,10 +836,16 @@ const AdminDashboard = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-primary hover:text-accent mr-3">
+                        <button
+                          onClick={() => handleEditUser(doctor.user)}
+                          className="text-primary hover:text-accent mr-3"
+                        >
                           <FaEdit /> Edit
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button
+                          onClick={() => handleDeleteUser(doctor.user)}
+                          className="text-red-600 hover:text-red-900"
+                        >
                           <FaTrash /> Delete
                         </button>
                       </td>
@@ -773,10 +876,16 @@ const AdminDashboard = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-primary hover:text-accent mr-3">
+                        <button
+                          onClick={() => handleEditUser(patient.user)}
+                          className="text-primary hover:text-accent mr-3"
+                        >
                           <FaEdit /> Edit
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button
+                          onClick={() => handleDeleteUser(patient.user)}
+                          className="text-red-600 hover:text-red-900"
+                        >
                           <FaTrash /> Delete
                         </button>
                       </td>
@@ -907,15 +1016,7 @@ const AdminDashboard = () => {
                 >
                   <FaTimes size={20} />
                 </button>
-                <AddDoctorForm
-                  onSuccess={handleDoctorSuccess}
-                  onCancel={() => setShowAddDoctorForm(false)}
-                  handleAddDoctor={handleAddDoctor}
-                  newDoctorData={newDoctorData}
-                  setNewDoctorData={setNewDoctorData}
-                  loading={loading}
-                  error={error}
-                />
+                <AddDoctorForm onSuccess={handleDoctorSuccess} onCancel={() => setShowAddDoctorForm(false)} />
               </div>
             ) : (
               <div className="bg-white p-6 rounded-lg shadow-md">
@@ -995,10 +1096,16 @@ const AdminDashboard = () => {
                               <div className="text-sm text-gray-500">{doctor.contactInfo?.phone}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <button className="text-primary hover:text-accent mr-3">
+                              <button
+                                onClick={() => handleEditUser(doctor.user)}
+                                className="text-primary hover:text-accent mr-3"
+                              >
                                 <FaEdit /> Edit
                               </button>
-                              <button className="text-red-600 hover:text-red-900">
+                              <button
+                                onClick={() => handleDeleteUser(doctor.user)}
+                                className="text-red-600 hover:text-red-900"
+                              >
                                 <FaTrash /> Delete
                               </button>
                             </td>
@@ -1116,10 +1223,16 @@ const AdminDashboard = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-primary hover:text-accent mr-3">
+                            <button
+                              onClick={() => handleEditUser(patient.user)}
+                              className="text-primary hover:text-accent mr-3"
+                            >
                               <FaEdit /> Edit
                             </button>
-                            <button className="text-red-600 hover:text-red-900">
+                            <button
+                              onClick={() => handleDeleteUser(patient.user)}
+                              className="text-red-600 hover:text-red-900"
+                            >
                               <FaTrash /> Delete
                             </button>
                           </td>
@@ -1258,6 +1371,143 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Database Management Tab */}
+        {activeTab === "database" && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">Database Management</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-gray-700">Collections</h3>
+                    <FaTable className="text-primary" />
+                  </div>
+                  <p className="text-2xl font-bold text-gray-800">{dbStats.collections}</p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-gray-700">Documents</h3>
+                    <FaDatabase className="text-primary" />
+                  </div>
+                  <p className="text-2xl font-bold text-gray-800">{dbStats.documents}</p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-gray-700">Database Size</h3>
+                    <FaServer className="text-primary" />
+                  </div>
+                  <p className="text-2xl font-bold text-gray-800">{dbStats.size}</p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-gray-700">Indexes</h3>
+                    <FaKey className="text-primary" />
+                  </div>
+                  <p className="text-2xl font-bold text-gray-800">{dbStats.indexes}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                    <h3 className="text-sm font-medium text-gray-700">Database Operations</h3>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="flex flex-wrap gap-3">
+                      <button className="bg-primary text-white px-4 py-2 rounded-md hover:bg-accent transition flex items-center">
+                        <FaDatabase className="mr-2" /> Backup Database
+                      </button>
+                      <button className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition flex items-center">
+                        <FaSync className="mr-2" /> Optimize Database
+                      </button>
+                      <button className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition flex items-center">
+                        <FaExclamationTriangle className="mr-2" /> Clear Test Data
+                      </button>
+                    </div>
+
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Database Connection</h4>
+                      <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
+                        <code className="text-xs text-gray-800">mongodb://localhost:27017/medical-referral-system</code>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                    <h3 className="text-sm font-medium text-gray-700">Collection Management</h3>
+                  </div>
+                  <div className="p-4">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Collection Name
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Documents
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Size
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          <tr>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">users</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">42</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">2.3 MB</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                              <button className="text-primary hover:text-accent mr-2">View</button>
+                              <button className="text-red-600 hover:text-red-900">Clear</button>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">doctors</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">18</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">4.7 MB</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                              <button className="text-primary hover:text-accent mr-2">View</button>
+                              <button className="text-red-600 hover:text-red-900">Clear</button>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">patients</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">24</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">5.1 MB</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                              <button className="text-primary hover:text-accent mr-2">View</button>
+                              <button className="text-red-600 hover:text-red-900">Clear</button>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">appointments</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">36</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">3.8 MB</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                              <button className="text-primary hover:text-accent mr-2">View</button>
+                              <button className="text-red-600 hover:text-red-900">Clear</button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Settings Tab */}
         {activeTab === "settings" && (
           <div className="space-y-6">
@@ -1343,6 +1593,24 @@ const AdminDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Edit User Modal */}
+      {showEditUserModal && selectedUser && (
+        <EditUserModal user={selectedUser} onClose={() => setShowEditUserModal(false)} onSave={handleUserUpdate} />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedUser && (
+        <DeleteConfirmationModal
+          title="Delete User"
+          message={`Are you sure you want to delete ${selectedUser.name}? This action cannot be undone.`}
+          onConfirm={confirmDeleteUser}
+          onCancel={() => {
+            setShowDeleteModal(false)
+            setSelectedUser(null)
+          }}
+        />
+      )}
     </div>
   )
 }

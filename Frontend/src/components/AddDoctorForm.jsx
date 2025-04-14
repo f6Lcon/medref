@@ -9,7 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 const AddDoctorForm = ({ onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
     name: "",
-    username: "", // Added username field
+    username: "",
     email: "",
     password: "",
     specialization: "",
@@ -134,7 +134,7 @@ const AddDoctorForm = ({ onSuccess, onCancel }) => {
       // Step 1: Register the user with doctor role
       const userData = {
         name: formData.name,
-        username: formData.username, // Include username
+        username: formData.username,
         email: formData.email,
         password: formData.password,
         role: "doctor",
@@ -315,7 +315,7 @@ const AddDoctorForm = ({ onSuccess, onCancel }) => {
 
             <div>
               <label htmlFor="hospital" className="block text-sm font-medium text-gray-700 mb-1">
-                <FaHospital className="inline mr-1" /> Hospital
+                <FaHospital className="inline mr-1" /> Hospital*
               </label>
               <select
                 id="hospital"
@@ -323,6 +323,7 @@ const AddDoctorForm = ({ onSuccess, onCancel }) => {
                 value={formData.hospital}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                required
               >
                 <option value="">Select a hospital</option>
                 {hospitals.map((hospital) => (
