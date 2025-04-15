@@ -18,11 +18,11 @@
  *
  * User Management Endpoints
  * ------------------------
- * GET /api/users - Get all users (requires admin role)
- * GET /api/users/:id - Get user by ID (requires admin role)
- * PUT /api/users/:id - Update user (requires admin role)
+ * GET /api/auth/users - Get all users (requires admin role)
+ * GET /api/auth/users/:id - Get user by ID (requires admin role)
+ * PUT /api/auth/users/:id - Update user (requires admin role)
  *    - Body: { name, email, username, role }
- * DELETE /api/users/:id - Delete user (requires admin role)
+ * DELETE /api/auth/users/:id - Delete user (requires admin role)
  *
  * Patient Endpoints
  * ----------------
@@ -63,9 +63,12 @@
  * GET /api/appointments/doctor - Get all appointments for current doctor (requires doctor role)
  * GET /api/appointments/all - Get all appointments (requires admin role)
  * GET /api/appointments/:id - Get appointment by ID (requires authentication, restricted to relevant users)
+ * PUT /api/appointments/:id - Update appointment (requires authentication, restricted to relevant users)
+ *    - Body: { doctor, hospital, date, time, duration, type, reason, notes }
  * PUT /api/appointments/:id/status - Update appointment status (requires doctor role)
  *    - Body: { status }
  * PUT /api/appointments/:id/cancel - Cancel appointment (requires authentication)
+ * DELETE /api/appointments/:id - Delete appointment (requires admin or doctor role)
  *
  * Referral Endpoints
  * ----------------
@@ -76,8 +79,11 @@
  * GET /api/referrals/referred - Get all referrals to current doctor (requires doctor role)
  * GET /api/referrals/all - Get all referrals (requires admin role)
  * GET /api/referrals/:id - Get referral by ID (requires authentication, restricted to relevant users)
+ * PUT /api/referrals/:id - Update referral (requires doctor role)
+ *    - Body: { reason, notes, urgency }
  * PUT /api/referrals/:id/status - Update referral status (requires doctor role)
  *    - Body: { status }
+ * DELETE /api/referrals/:id - Delete referral (requires admin or referring doctor role)
  * POST /api/referrals/:id/appointment - Create appointment from referral (requires doctor role)
  *    - Body: { date, time, duration, notes }
  *

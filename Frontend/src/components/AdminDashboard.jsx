@@ -26,6 +26,7 @@ import {
   FaServer,
   FaTable,
   FaKey,
+  FaSave,
   FaExclamationTriangle,
 } from "react-icons/fa"
 import LoginContext from "../context/LoginContext"
@@ -34,6 +35,8 @@ import AddDoctorForm from "./AddDoctorForm"
 import ReportGenerator from "./ReportGenerator"
 import EditUserModal from "./EditUserModal"
 import DeleteConfirmationModal from "./DeleteConfirmationModal"
+// Add the import for AppointmentEditModal at the top of the file
+import AppointmentEditModal from "./AppointmentEditModal"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
@@ -68,6 +71,10 @@ const AdminDashboard = () => {
   const [refreshing, setRefreshing] = useState(false)
   const navigate = useNavigate()
   const { setIsLoggedIn, setUserRole } = useContext(LoginContext)
+  // Add this to the component state declarations (near the top where other state variables are defined)
+  const [showEditAppointmentModal, setShowEditAppointmentModal] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState(null)
+  const [showDeleteAppointmentModal, setShowDeleteAppointmentModal] = useState(false)
 
   const fetchData = async () => {
     const token = localStorage.getItem("token")
@@ -87,7 +94,7 @@ const AdminDashboard = () => {
 
       // Fetch all users
       try {
-        const usersResponse = await axios.get(`${API_URL}/api/users`, {
+        const usersResponse = await axios.get(`${API_URL}/api/auth/users`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         setUsers(usersResponse.data || [])
@@ -193,7 +200,7 @@ const AdminDashboard = () => {
             collections: 8,
             documents: 120,
             size: "24.5 MB",
-            indexes: 16,
+            indexes: 0,
           },
         )
       } catch (err) {
@@ -346,52 +353,26 @@ const AdminDashboard = () => {
     setShowDeleteModal(true)
   }
 
-  const confirmDeleteUser = async () => {
-    if (!selectedUser) return
-
-    try {
-      const token = localStorage.getItem("token")
-      await axios.delete(`${API_URL}/api/users/${selectedUser._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      // Remove user from the list
-      setUsers(users.filter((user) => user._id !== selectedUser._id))
-
-      // If the user was a doctor or patient, remove them from those lists too
-      if (selectedUser.role === "doctor") {
-        setDoctors(doctors.filter((doctor) => doctor.user?._id !== selectedUser._id))
-      } else if (selectedUser.role === "patient") {
-        setPatients(patients.filter((patient) => patient.user?._id !== selectedUser._id))
-      }
-
-      setShowDeleteModal(false)
-      setSelectedUser(null)
-      alert("User deleted successfully!")
-    } catch (err) {
-      console.error("Error deleting user:", err)
-      alert("Failed to delete user. Please try again.")
-    }
-  }
-
   const handleUserUpdate = (updatedUser) => {
     // Update the user in the users list
     setUsers(users.map((user) => (user._id === updatedUser._id ? updatedUser : user)))
 
-    // If the user is a doctor or patient, update them in those lists too
+    // If the user is a doctor, update them in the doctors list too
     if (updatedUser.role === "doctor") {
       setDoctors(
         doctors.map((doctor) => {
-          if (doctor.user?._id === updatedUser._id) {
+          if (doctor.user && doctor.user._id === updatedUser._id) {
             return { ...doctor, user: updatedUser }
           }
           return doctor
         }),
       )
-    } else if (updatedUser.role === "patient") {
+    }
+    // If the user is a patient, update them in the patients list too
+    else if (updatedUser.role === "patient") {
       setPatients(
         patients.map((patient) => {
-          if (patient.user?._id === updatedUser._id) {
+          if (patient.user && patient.user._id === updatedUser._id) {
             return { ...patient, user: updatedUser }
           }
           return patient
@@ -401,11 +382,106 @@ const AdminDashboard = () => {
 
     setShowEditUserModal(false)
     setSelectedUser(null)
+
+    // Show success message
+    alert("User updated successfully!")
+
+    // Refresh data to ensure everything is in sync
+    refreshData()
+  }
+
+  const confirmDeleteUser = async () => {
+    if (!selectedUser) return
+
+    try {
+      const token = localStorage.getItem("token")
+      console.log("Deleting user with ID:", selectedUser._id)
+
+      // Delete the user
+      await axios.delete(`${API_URL}/api/auth/users/${selectedUser._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      // Remove user from the list
+      setUsers(users.filter((user) => user._id !== selectedUser._id))
+
+      // If the user was a doctor, remove them from the doctors list
+      if (selectedUser.role === "doctor") {
+        setDoctors(doctors.filter((doctor) => !(doctor.user && doctor.user._id === selectedUser._id)))
+      }
+      // If the user was a patient, remove them from the patients list
+      else if (selectedUser.role === "patient") {
+        setPatients(patients.filter((patient) => !(patient.user && patient.user._id === selectedUser._id)))
+      }
+
+      setShowDeleteModal(false)
+      setSelectedUser(null)
+
+      // Show success message
+      alert("User deleted successfully!")
+
+      // Refresh data to ensure everything is in sync
+      refreshData()
+    } catch (err) {
+      console.error("Error deleting user:", err)
+      alert(
+        err.response?.status === 404
+          ? "User not found. The API endpoint may be incorrect."
+          : err.response?.data?.message || "Failed to delete user. Please try again.",
+      )
+    }
   }
 
   const refreshData = () => {
     setRefreshing(true)
     fetchData()
+  }
+
+  const handleDeleteAppointment = (appointmentId) => {
+    setSelectedAppointment({ _id: appointmentId })
+    setShowDeleteAppointmentModal(true)
+  }
+
+  const confirmDeleteAppointment = async () => {
+    if (!selectedAppointment) return
+
+    try {
+      const token = localStorage.getItem("token")
+      console.log("Deleting appointment with ID:", selectedAppointment._id)
+
+      await axios.delete(`${API_URL}/api/appointments/${selectedAppointment._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      // Remove appointment from the list
+      setAppointments(appointments.filter((appt) => appt._id !== selectedAppointment._id))
+
+      setShowDeleteAppointmentModal(false)
+      setSelectedAppointment(null)
+      alert("Appointment deleted successfully!")
+    } catch (err) {
+      console.error("Error deleting appointment:", err)
+      alert(
+        err.response?.status === 404
+          ? "Appointment not found. The API endpoint may be incorrect."
+          : err.response?.data?.message || "Failed to delete appointment. Please try again.",
+      )
+    }
+  }
+
+  // Add this function to handle appointment updates
+  const handleAppointmentUpdate = (updatedAppointment) => {
+    // Update the appointment in the appointments list
+    setAppointments(appointments.map((appt) => (appt._id === updatedAppointment._id ? updatedAppointment : appt)))
+
+    setShowEditAppointmentModal(false)
+    setSelectedAppointment(null)
+    alert("Appointment updated successfully!")
+  }
+
+  const handleEditAppointment = (appointment) => {
+    setSelectedAppointment(appointment)
+    setShowEditAppointmentModal(true)
   }
 
   if (loading && !refreshing) {
@@ -1348,10 +1424,16 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-primary hover:text-accent mr-3">
+                            <button
+                              onClick={() => handleEditAppointment(appointment)}
+                              className="text-primary hover:text-accent mr-3"
+                            >
                               <FaEdit /> Edit
                             </button>
-                            <button className="text-red-600 hover:text-red-900">
+                            <button
+                              onClick={() => handleDeleteAppointment(appointment._id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
                               <FaTrash /> Delete
                             </button>
                           </td>
@@ -1419,7 +1501,7 @@ const AdminDashboard = () => {
                   <div className="p-4 space-y-4">
                     <div className="flex flex-wrap gap-3">
                       <button className="bg-primary text-white px-4 py-2 rounded-md hover:bg-accent transition flex items-center">
-                        <FaDatabase className="mr-2" /> Backup Database
+                        <FaSave className="mr-2" /> Backup Database
                       </button>
                       <button className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition flex items-center">
                         <FaSync className="mr-2" /> Optimize Database
@@ -1609,6 +1691,25 @@ const AdminDashboard = () => {
             setShowDeleteModal(false)
             setSelectedUser(null)
           }}
+        />
+      )}
+      {showDeleteAppointmentModal && selectedAppointment && (
+        <DeleteConfirmationModal
+          title="Delete Appointment"
+          message="Are you sure you want to delete this appointment? This action cannot be undone."
+          onConfirm={confirmDeleteAppointment}
+          onCancel={() => {
+            setShowDeleteAppointmentModal(false)
+            setSelectedAppointment(null)
+          }}
+        />
+      )}
+      {/* Add the AppointmentEditModal to the JSX at the end of the component */}
+      {showEditAppointmentModal && selectedAppointment && (
+        <AppointmentEditModal
+          appointment={selectedAppointment}
+          onClose={() => setShowEditAppointmentModal(false)}
+          onSave={handleAppointmentUpdate}
         />
       )}
     </div>

@@ -24,6 +24,7 @@ const EditUserModal = ({ user, onClose, onSave }) => {
     })
   }
 
+  // Improve the handleSubmit function to better handle errors and show loading state
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -37,21 +38,31 @@ const EditUserModal = ({ user, onClose, onSave }) => {
         return
       }
 
-      const response = await axios.put(`${API_URL}/api/users/${user._id}`, formData, {
+      // Log the user ID to help with debugging
+      console.log("Updating user with ID:", user._id)
+      console.log("Update data:", formData)
+
+      const response = await axios.put(`${API_URL}/api/auth/users/${user._id}`, formData, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       })
 
+      console.log("Update response:", response.data)
+
       // Call the onSave callback with the updated user
-      onSave({
-        ...user,
-        ...response.data,
-      })
+      if (onSave) {
+        onSave(response.data)
+      }
     } catch (err) {
       console.error("Error updating user:", err)
-      setError(err.response?.data?.message || "Failed to update user. Please try again.")
+      setError(
+        err.response?.status === 404
+          ? "User not found. The API endpoint may be incorrect."
+          : err.response?.data?.message || "Failed to update user. Please try again.",
+      )
+    } finally {
       setLoading(false)
     }
   }

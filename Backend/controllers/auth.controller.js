@@ -114,10 +114,6 @@ const registerUser = asyncHandler(async (req, res) => {
       html: verificationEmailHtml,
     })
 
-    // Generate token for immediate use (even before verification)
-    // This allows the user to create their profile
-    const token = generateToken(user._id)
-
     res.status(201).json({
       _id: user._id,
       name: user.name,
@@ -125,7 +121,6 @@ const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       isVerified: user.isVerified,
-      token: token, // Include token in response
       message: "Registration successful! Please check your email for verification OTP.",
     })
   } else {
@@ -330,4 +325,90 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   }
 })
 
-export { loginUser, registerUser, verifyEmail, resendOTP, getUserProfile, updateUserProfile }
+// @desc    Get all users
+// @route   GET /api/auth/users
+// @access  Private/Admin
+const getUsers = asyncHandler(async (req, res) => {
+  const users = await User.find({})
+  res.json(users)
+})
+
+// @desc    Get user by ID
+// @route   GET /api/auth/users/:id
+// @access  Private/Admin
+const getUserById = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id)
+
+  if (user) {
+    res.json(user)
+  } else {
+    res.status(404)
+    throw new Error("User not found")
+  }
+})
+
+// @desc    Update user
+// @route   PUT /api/auth/users/:id
+// @access  Private/Admin
+const updateUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id)
+
+  if (user) {
+    user.name = req.body.name || user.name
+    user.email = req.body.email || user.email
+    user.username = req.body.username || user.username
+
+    // Only admin can change roles
+    if (req.user.role === "admin") {
+      user.role = req.body.role || user.role
+    }
+
+    const updatedUser = await user.save()
+
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      username: updatedUser.username,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      isVerified: updatedUser.isVerified,
+    })
+  } else {
+    res.status(404)
+    throw new Error("User not found")
+  }
+})
+
+// @desc    Delete user
+// @route   DELETE /api/auth/users/:id
+// @access  Private/Admin
+const deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id)
+
+  if (user) {
+    // Don't allow deleting yourself
+    if (user._id.toString() === req.user._id.toString()) {
+      res.status(400)
+      throw new Error("Cannot delete your own account")
+    }
+
+    await user.deleteOne()
+    res.json({ message: "User removed" })
+  } else {
+    res.status(404)
+    throw new Error("User not found")
+  }
+})
+
+export {
+  loginUser,
+  registerUser,
+  verifyEmail,
+  resendOTP,
+  getUserProfile,
+  updateUserProfile,
+  getUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+}
