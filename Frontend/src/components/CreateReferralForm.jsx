@@ -7,7 +7,7 @@ import { FaUserCircle, FaHospital, FaExclamationTriangle, FaClipboardList, FaUse
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
-const CreateReferralForm = ({ onSuccess }) => {
+const CreateReferralForm = ({ onSuccess, onClose }) => {
   const [formData, setFormData] = useState({
     patient: "",
     referredToDoctor: "",
@@ -18,6 +18,7 @@ const CreateReferralForm = ({ onSuccess }) => {
   })
   const [patients, setPatients] = useState([])
   const [doctors, setDoctors] = useState([])
+  const [filteredDoctors, setFilteredDoctors] = useState([])
   const [hospitals, setHospitals] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -39,7 +40,7 @@ const CreateReferralForm = ({ onSuccess }) => {
         })
         setPatients(patientsResponse.data)
 
-        // Fetch doctors
+        // Fetch all doctors
         const doctorsResponse = await axios.get(`${API_URL}/api/doctors`, {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -58,6 +59,23 @@ const CreateReferralForm = ({ onSuccess }) => {
 
     fetchData()
   }, [navigate])
+
+  // Filter doctors based on selected hospital
+  useEffect(() => {
+    if (formData.referredToHospital) {
+      const doctorsInHospital = doctors.filter(
+        (doctor) => doctor.hospital && doctor.hospital._id === formData.referredToHospital,
+      )
+      setFilteredDoctors(doctorsInHospital)
+
+      // Clear selected doctor if not in this hospital
+      if (formData.referredToDoctor && !doctorsInHospital.some((doc) => doc._id === formData.referredToDoctor)) {
+        setFormData((prev) => ({ ...prev, referredToDoctor: "" }))
+      }
+    } else {
+      setFilteredDoctors([])
+    }
+  }, [formData.referredToHospital, doctors, formData.referredToDoctor])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -197,9 +215,16 @@ const CreateReferralForm = ({ onSuccess }) => {
               value={formData.referredToDoctor}
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={!formData.referredToHospital}
             >
-              <option value="">Select a doctor (optional)</option>
-              {doctors.map((doctor) => (
+              <option value="">
+                {!formData.referredToHospital
+                  ? "Please select a hospital first"
+                  : filteredDoctors.length === 0
+                    ? "No doctors available at this hospital"
+                    : "Select a doctor (optional)"}
+              </option>
+              {filteredDoctors.map((doctor) => (
                 <option key={doctor._id} value={doctor._id}>
                   Dr. {doctor.user?.name || "Unknown"} - {doctor.specialization}
                 </option>

@@ -18,6 +18,7 @@ const BookAppointmentForm = ({ onSuccess }) => {
     notes: "",
   })
   const [doctors, setDoctors] = useState([])
+  const [filteredDoctors, setFilteredDoctors] = useState([])
   const [hospitals, setHospitals] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -33,7 +34,7 @@ const BookAppointmentForm = ({ onSuccess }) => {
           return
         }
 
-        // Fetch doctors
+        // Fetch all doctors
         const doctorsResponse = await axios.get(`${API_URL}/api/doctors`, {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -52,6 +53,21 @@ const BookAppointmentForm = ({ onSuccess }) => {
 
     fetchData()
   }, [navigate])
+
+  // Filter doctors based on selected hospital
+  useEffect(() => {
+    if (formData.hospital) {
+      const doctorsInHospital = doctors.filter((doctor) => doctor.hospital && doctor.hospital._id === formData.hospital)
+      setFilteredDoctors(doctorsInHospital)
+
+      // Clear selected doctor if not in this hospital
+      if (formData.doctor && !doctorsInHospital.some((doc) => doc._id === formData.doctor)) {
+        setFormData((prev) => ({ ...prev, doctor: "" }))
+      }
+    } else {
+      setFilteredDoctors([])
+    }
+  }, [formData.hospital, doctors, formData.doctor])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -145,27 +161,6 @@ const BookAppointmentForm = ({ onSuccess }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="doctor" className="block text-sm font-medium text-gray-700 mb-1">
-              <FaUserMd className="inline mr-2" /> Select Doctor*
-            </label>
-            <select
-              id="doctor"
-              name="doctor"
-              value={formData.doctor}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-accent"
-              required
-            >
-              <option value="">Select a doctor</option>
-              {doctors.map((doctor) => (
-                <option key={doctor._id} value={doctor._id}>
-                  Dr. {doctor.user?.name || "Unknown"} - {doctor.specialization}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <label htmlFor="hospital" className="block text-sm font-medium text-gray-700 mb-1">
               <FaHospital className="inline mr-2" /> Select Hospital*
             </label>
@@ -181,6 +176,34 @@ const BookAppointmentForm = ({ onSuccess }) => {
               {hospitals.map((hospital) => (
                 <option key={hospital._id} value={hospital._id}>
                   {hospital.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="doctor" className="block text-sm font-medium text-gray-700 mb-1">
+              <FaUserMd className="inline mr-2" /> Select Doctor*
+            </label>
+            <select
+              id="doctor"
+              name="doctor"
+              value={formData.doctor}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-accent"
+              required
+              disabled={!formData.hospital}
+            >
+              <option value="">
+                {!formData.hospital
+                  ? "Please select a hospital first"
+                  : filteredDoctors.length === 0
+                    ? "No doctors available at this hospital"
+                    : "Select a doctor"}
+              </option>
+              {filteredDoctors.map((doctor) => (
+                <option key={doctor._id} value={doctor._id}>
+                  Dr. {doctor.user?.name || "Unknown"} - {doctor.specialization}
                 </option>
               ))}
             </select>
@@ -270,7 +293,7 @@ const BookAppointmentForm = ({ onSuccess }) => {
           <button
             type="submit"
             className="bg-accent text-white py-2 px-6 rounded-md hover:bg-primary hover:text-accent transition disabled:opacity-50"
-            disabled={loading}
+            disabled={loading || !formData.hospital || !formData.doctor}
           >
             {loading ? "Booking..." : "Book Appointment"}
           </button>

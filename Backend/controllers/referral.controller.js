@@ -4,6 +4,12 @@ import Doctor from "../models/doctor.model.js"
 import Patient from "../models/patient.model.js"
 import Hospital from "../models/hospital.model.js"
 import Appointment from "../models/appointment.model.js"
+import sendEmail from "../utils/sendEmail.js"
+import {
+  referralNotificationToPatient,
+  referralNotificationToDoctor,
+  referralStatusUpdateToPatient,
+} from "../utils/emailTemplates.js"
 
 // @desc    Create a new referral
 // @route   POST /api/referrals
@@ -36,11 +42,18 @@ const createReferral = asyncHandler(async (req, res) => {
   }
 
   // Check if referred doctor exists (if provided)
+  let referredDoctor = null
   if (referredToDoctor) {
-    const referredDoctor = await Doctor.findById(referredToDoctor)
+    referredDoctor = await Doctor.findById(referredToDoctor)
     if (!referredDoctor) {
       res.status(404)
       throw new Error("Referred doctor not found")
+    }
+
+    // Validate that the referred doctor belongs to the referred hospital
+    if (referredDoctor.hospital.toString() !== referredToHospital) {
+      res.status(400)
+      throw new Error("The selected doctor does not work at the specified hospital")
     }
   }
 
@@ -82,6 +95,57 @@ const createReferral = asyncHandler(async (req, res) => {
       .populate("referredToHospital")
 
     console.log("Referral created successfully:", populatedReferral)
+
+    // Send email notification to patient
+    try {
+      const patientEmailTemplate = referralNotificationToPatient(
+        populatedReferral,
+        populatedReferral.patient,
+        populatedReferral.referringDoctor,
+        populatedReferral.referredToDoctor,
+        populatedReferral.referredToHospital,
+      )
+
+      await sendEmail({
+        email: populatedReferral.patient.email || populatedReferral.patient.user.email,
+        subject: patientEmailTemplate.subject,
+        html: patientEmailTemplate.html,
+      })
+
+      console.log(
+        `Referral notification email sent to patient: ${populatedReferral.patient.email || populatedReferral.patient.user.email}`,
+      )
+    } catch (emailError) {
+      console.error("Error sending referral notification email to patient:", emailError)
+      // Don't throw error, just log it
+    }
+
+    // Send email notification to referred doctor (if specified)
+    if (populatedReferral.referredToDoctor) {
+      try {
+        const doctorEmailTemplate = referralNotificationToDoctor(
+          populatedReferral,
+          populatedReferral.patient,
+          populatedReferral.referringDoctor,
+          populatedReferral.referredToDoctor,
+          populatedReferral.referredToHospital,
+        )
+
+        await sendEmail({
+          email: populatedReferral.referredToDoctor.email || populatedReferral.referredToDoctor.user.email,
+          subject: doctorEmailTemplate.subject,
+          html: doctorEmailTemplate.html,
+        })
+
+        console.log(
+          `Referral notification email sent to referred doctor: ${populatedReferral.referredToDoctor.email || populatedReferral.referredToDoctor.user.email}`,
+        )
+      } catch (emailError) {
+        console.error("Error sending referral notification email to referred doctor:", emailError)
+        // Don't throw error, just log it
+      }
+    }
+
     res.status(201).json(populatedReferral)
   } else {
     res.status(400)
@@ -307,6 +371,10 @@ const updateReferralStatus = asyncHandler(async (req, res) => {
       (doctor && referral.referringDoctor.toString() === doctor._id.toString()) ||
       req.user.role === "admin"
     ) {
+      // Save the previous status to check if it changed
+      const previousStatus = referral.status
+
+      // Update the status
       referral.status = status
       const updatedReferral = await referral.save()
 
@@ -336,6 +404,33 @@ const updateReferralStatus = asyncHandler(async (req, res) => {
         .populate("referredToHospital")
 
       console.log("Referral status updated successfully:", populatedReferral)
+
+      // If the status changed to "accepted", send an email to the patient
+      if (previousStatus !== status) {
+        try {
+          const patientEmailTemplate = referralStatusUpdateToPatient(
+            populatedReferral,
+            populatedReferral.patient,
+            populatedReferral.referringDoctor,
+            populatedReferral.referredToDoctor,
+            populatedReferral.referredToHospital,
+          )
+
+          await sendEmail({
+            email: populatedReferral.patient.email || populatedReferral.patient.user.email,
+            subject: patientEmailTemplate.subject,
+            html: patientEmailTemplate.html,
+          })
+
+          console.log(
+            `Referral status update email sent to patient: ${populatedReferral.patient.email || populatedReferral.patient.user.email}`,
+          )
+        } catch (emailError) {
+          console.error("Error sending referral status update email to patient:", emailError)
+          // Don't throw error, just log it
+        }
+      }
+
       res.json(populatedReferral)
     } else {
       res.status(401)
@@ -382,6 +477,35 @@ const createAppointmentFromReferral = asyncHandler(async (req, res) => {
         referral.appointmentCreated = true
         referral.status = "accepted"
         await referral.save()
+
+        // Fetch full details for email
+        const patientDetails = await Patient.findById(referral.patient).populate("user")
+        const doctorDetails = await Doctor.findById(referral.referredToDoctor).populate("user")
+        const hospitalDetails = await Hospital.findById(referral.referredToHospital)
+
+        // Send confirmation email to patient
+        try {
+          const { appointmentConfirmationToPatient } = await import("../utils/emailTemplates.js")
+          const patientEmailTemplate = appointmentConfirmationToPatient(
+            appointment,
+            patientDetails,
+            doctorDetails,
+            hospitalDetails,
+          )
+
+          await sendEmail({
+            email: patientDetails.email || patientDetails.user.email,
+            subject: patientEmailTemplate.subject,
+            html: patientEmailTemplate.html,
+          })
+
+          console.log(
+            `Appointment confirmation email sent to patient: ${patientDetails.email || patientDetails.user.email}`,
+          )
+        } catch (emailError) {
+          console.error("Error sending appointment confirmation email to patient:", emailError)
+          // Don't throw error, just log it
+        }
 
         res.status(201).json(appointment)
       } else {

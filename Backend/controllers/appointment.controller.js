@@ -4,6 +4,8 @@ import Doctor from "../models/doctor.model.js"
 import Patient from "../models/patient.model.js"
 import Hospital from "../models/hospital.model.js"
 import Referral from "../models/referral.model.js"
+import sendEmail from "../utils/sendEmail.js"
+import { appointmentConfirmationToPatient, appointmentNotificationToDoctor } from "../utils/emailTemplates.js"
 
 // @desc    Create a new appointment
 // @route   POST /api/appointments
@@ -33,6 +35,12 @@ const createAppointment = asyncHandler(async (req, res) => {
     throw new Error("Hospital not found")
   }
 
+  // Validate that the doctor belongs to the specified hospital
+  if (doctorExists.hospital.toString() !== hospital) {
+    res.status(400)
+    throw new Error("The selected doctor does not work at the specified hospital")
+  }
+
   // Check if the doctor is available at the requested time
   // This would require more complex logic in a real application
   // For now, we'll just create the appointment
@@ -59,6 +67,55 @@ const createAppointment = asyncHandler(async (req, res) => {
         referralDoc.status = "accepted"
         await referralDoc.save()
       }
+    }
+
+    // Fetch full doctor and hospital details for the email
+    const doctorDetails = await Doctor.findById(doctor).populate("user")
+    const hospitalDetails = await Hospital.findById(hospital)
+    const patientDetails = await Patient.findById(patient._id).populate("user")
+
+    // Send confirmation email to patient
+    try {
+      const patientEmailTemplate = appointmentConfirmationToPatient(
+        appointment,
+        patientDetails,
+        doctorDetails,
+        hospitalDetails,
+      )
+
+      await sendEmail({
+        email: patientDetails.email || patientDetails.user.email,
+        subject: patientEmailTemplate.subject,
+        html: patientEmailTemplate.html,
+      })
+
+      console.log(
+        `Appointment confirmation email sent to patient: ${patientDetails.email || patientDetails.user.email}`,
+      )
+    } catch (emailError) {
+      console.error("Error sending appointment confirmation email to patient:", emailError)
+      // Don't throw error, just log it - we don't want to fail the appointment creation
+    }
+
+    // Send notification email to doctor
+    try {
+      const doctorEmailTemplate = appointmentNotificationToDoctor(
+        appointment,
+        patientDetails,
+        doctorDetails,
+        hospitalDetails,
+      )
+
+      await sendEmail({
+        email: doctorDetails.email || doctorDetails.user.email,
+        subject: doctorEmailTemplate.subject,
+        html: doctorEmailTemplate.html,
+      })
+
+      console.log(`Appointment notification email sent to doctor: ${doctorDetails.email || doctorDetails.user.email}`)
+    } catch (emailError) {
+      console.error("Error sending appointment notification email to doctor:", emailError)
+      // Don't throw error, just log it
     }
 
     res.status(201).json(appointment)
