@@ -41,6 +41,9 @@ const SignUp = () => {
 
   const [hospitals, setHospitals] = useState([])
 
+  // Add a new state for phone number validation
+  const [phoneError, setPhoneError] = useState("")
+
   useEffect(() => {
     // Fetch hospitals for doctor registration
     const fetchHospitals = async () => {
@@ -64,8 +67,35 @@ const SignUp = () => {
     return email.split("@")[0]
   }
 
+  // Add this function after the generateUsername function
+  const validateKenyanPhoneNumber = (phoneNumber) => {
+    // Remove any spaces, dashes or parentheses
+    const cleanedNumber = phoneNumber.replace(/[\s\-()]/g, "")
+
+    // Check if it's a valid Kenyan format
+    // Format 1: +254 followed by 9 digits (international format)
+    // Format 2: 0 followed by 9 digits (local format)
+    const kenyanRegex = /^(?:\+254|0)[17]\d{8}$/
+
+    if (!kenyanRegex.test(cleanedNumber)) {
+      return false
+    }
+
+    return true
+  }
+
+  // Modify the handleChange function to validate phone numbers
   const handleChange = (e) => {
     const { name, value, type, files } = e.target
+
+    // If phone number is being changed, validate it
+    if (name === "phoneNumber") {
+      if (value && !validateKenyanPhoneNumber(value)) {
+        setPhoneError("Please enter a valid Kenyan phone number (e.g., 07XX XXX XXX or +254 7XX XXX XXX)")
+      } else {
+        setPhoneError("")
+      }
+    }
 
     // If email is changed and username is empty, suggest a username
     if (name === "email" && !formData.username) {
@@ -90,8 +120,16 @@ const SignUp = () => {
     setStep(step - 1)
   }
 
+  // Modify the handleSubmit function to check phone validation before submission
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // Check if phone number is valid before proceeding
+    if (formData.phoneNumber && !validateKenyanPhoneNumber(formData.phoneNumber)) {
+      setPhoneError("Please enter a valid Kenyan phone number (e.g., 07XX XXX XXX or +254 7XX XXX XXX)")
+      return
+    }
+
     setLoading(true)
     setError("")
 
@@ -308,7 +346,7 @@ const SignUp = () => {
             <>
               <div>
                 <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number
+                  Phone Number (Kenyan format)
                 </label>
                 <div className="relative">
                   <FaPhoneAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -318,11 +356,19 @@ const SignUp = () => {
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleChange}
-                    className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                    placeholder="(123) 456-7890"
+                    className={`pl-10 pr-4 py-2 w-full border ${
+                      phoneError ? "border-red-500" : "border-gray-300"
+                    } rounded-md focus:outline-none focus:ring-2 ${
+                      phoneError ? "focus:ring-red-500" : "focus:ring-accent"
+                    }`}
+                    placeholder="07XX XXX XXX or +254 7XX XXX XXX"
                     required
                   />
                 </div>
+                {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter a valid Kenyan mobile number (e.g., 0712 345 678 or +254 712 345 678)
+                </p>
               </div>
 
               <div>
