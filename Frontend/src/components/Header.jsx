@@ -41,7 +41,6 @@ const Header = () => {
       return [
         ...commonItems,
         { title: "Dashboard", path: "/admin-dashboard" },
-        { title: "Admin Panel", path: "/admin" },
       ]
     }
 

@@ -26,7 +26,7 @@ const Admin = () => {
     const generatePDF = () => {
         const doc = new jsPDF();
         doc.setFontSize(22);
-        doc.text("Health Nest - Hospital Report", 20, 20);
+        doc.text("MEDREF - Hospital Report", 20, 20);
         doc.setFontSize(16);
         doc.text("Generated on: " + new Date().toLocaleDateString(), 20, 30);
         doc.setFontSize(14);

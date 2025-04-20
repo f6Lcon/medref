@@ -346,7 +346,7 @@ const SignUp = () => {
             <>
               <div>
                 <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number (Kenyan format)
+                  Phone Number
                 </label>
                 <div className="relative">
                   <FaPhoneAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -367,7 +367,7 @@ const SignUp = () => {
                 </div>
                 {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
                 <p className="text-xs text-gray-500 mt-1">
-                  Enter a valid Kenyan mobile number (e.g., 0712 345 678 or +254 712 345 678)
+                  Enter a valid mobile number (e.g., 0712 345 678 or +254 712 345 678)
                 </p>
               </div>
 
