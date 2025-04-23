@@ -47,7 +47,7 @@ const ContactUs = () => {
             <div className="space-y-4">
               <div className="flex items-center">
                 <FaEnvelope className="text-accent mr-4 text-xl" />
-                <p>muriithidennis340#gmail.com</p>
+                <p>muriithidennis340@gmail.com</p>
               </div>
               <div className="flex items-center">
                 <FaPhone className="text-accent mr-4 text-xl" />
