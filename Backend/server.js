@@ -32,6 +32,13 @@ const __dirname = path.dirname(__filename)
 // Serve uploaded files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 
+
+//Use the frontend app
+//app.use(express.static(path.join(__dirname, "/Frontend/dist")))
+
+// render client for any path
+//app.get('*', (req, res) => res.sendFile(path.join(__dirname, '/Frontend/dist/index.html')))
+
 // Routes
 app.use("/api/auth", authRoutes)
 app.use("/api/patients", patientRoutes)
