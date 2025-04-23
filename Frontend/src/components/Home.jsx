@@ -9,32 +9,39 @@ import 'slick-carousel/slick/slick-theme.css';
 
 const Home = () => {
     const features = [
-        { icon: FaHospital, title: 'State-of-the-art Facilities', description: 'Experience healthcare in our modern, well-equipped facilities.' },
-        { icon: FaUserMd, title: 'Expert Medical Staff', description: 'Our team of experienced doctors and nurses provide top-notch care.' },
-        { icon: FaCalendarCheck, title: 'Easy Appointments', description: 'Book and manage your appointments with just a few clicks.' },
-        { icon: FaHeartbeat, title: "Comprehensive Care", description: "From preventive care to complex treatments, we've got you covered." },
-        { icon: FaAmbulance, title: '24/7 Emergency Services', description: 'Round-the-clock emergency care for your peace of mind.' },
-        { icon: FaLaptopMedical, title: 'Telemedicine', description: 'Get expert medical advice from the comfort of your home.' },
-    ];
+
+      { icon: FaHospital, title: 'State-of-the-Art Facilities', description: 'Experience healthcare in our modern, well-equipped facilities.' },
+  
+      { icon: FaUserMd, title: 'Expert Medical Staff', description: 'Our team of experienced doctors and nurses provide top-notch care.' },
+  
+      { icon: FaCalendarCheck, title: 'Easy Appointments', description: 'Book and manage your appointments with just a few clicks.' },
+  
+      { icon: FaHeartbeat, title: 'Comprehensive Care', description: 'From preventive care to complex treatments, we’ve got you covered.' },
+  
+      { icon: FaAmbulance, title: '24/7 Emergency Services', description: 'Round-the-clock emergency care for your peace of mind.' },
+  
+      { icon: FaLaptopMedical, title: 'Telemedicine', description: 'Get expert medical advice from the comfort of your home.' }
+  
+  ];
     const testimonials = [
       {
           name: "John Doe",
-          text: "Health Nest has revolutionized how I manage my healthcare. It's so easy to use!",
+          text: "MEdDREF has revolutionized how I manage my healthcare. It's so easy to use!",
           image: "https://randomuser.me/api/portraits/men/32.jpg",
       },
       {
           name: "Jane Smith",
-          text: "I love how I can access all my medical information in one place. Great job, Health Nest!",
+          text: "I love how I can access all my medical information in one place. Great job, MEDREF!",
           image: "https://randomuser.me/api/portraits/women/44.jpg",
       },
       {
           name: "Mike Johnson",
-          text: "Booking appointments has never been easier. Health Nest is a game-changer!",
-          image: "https://randomuser.me/api/portraits/men/22.jpg",
+          text: "Booking appointments has never been easier. MEDREF is a game-changer!",
+          image: "https://randomuser.me/api/portraits/men/23.jpg",
       },
       {
           name: "Emily Davis",
-          text: "The staff is incredibly helpful and caring. I highly recommend Health Nest!",
+          text: "The staff is incredibly helpful and caring. I highly recommend MEDREF!",
           image: "https://randomuser.me/api/portraits/women/25.jpg",
       },
       {
@@ -44,7 +51,7 @@ const Home = () => {
       },
       {
           name: "Mary Brown",
-          text: "I appreciate the convenience of managing everything online. Thank you, Health Nest!",
+          text: "I appreciate the convenience of managing everything online. Thank you, MEDREF!",
           image: "https://randomuser.me/api/portraits/women/13.jpg",
       },
   ];
@@ -121,7 +128,7 @@ const images = [
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              Your Advanced Healthcare Management Solution
+              Revolutionizing Healthcare Management for a Healthier Tomorrow
             </motion.p>
             <Link to="/signup">
               <motion.button
