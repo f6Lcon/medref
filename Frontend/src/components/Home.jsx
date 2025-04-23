@@ -25,8 +25,8 @@ const Home = () => {
   ];
     const testimonials = [
       {
-          name: "John Doe",
-          text: "MEdDREF has revolutionized how I manage my healthcare. It's so easy to use!",
+          name: "McGee",
+          text: "MEDDREF has revolutionized how I manage my healthcare. It's so easy to use!",
           image: "https://randomuser.me/api/portraits/men/32.jpg",
       },
       {
