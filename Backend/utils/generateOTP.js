@@ -4,4 +4,5 @@ const generateOTP = () => {
   }
   
   export default generateOTP
+
   
