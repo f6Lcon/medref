@@ -1,4 +1,4 @@
-# Medical Referral Appointment System API
+# Medical Referral Appointment System API Documentation and Endpoints
 
 This is the backend API documentation for the Medical Referral Appointment System. The system allows patients, doctors, and admins to manage medical referrals and appointments efficiently.
 
