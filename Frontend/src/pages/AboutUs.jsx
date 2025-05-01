@@ -8,17 +8,17 @@ const AboutUs = () => {
     {
       icon: FaHeartbeat,
       title: 'Our Mission',
-      description: 'To deliver healthcare solutions that ensure better patient care through efficiency and technological advancement.',
+      description: 'To empower healthcare systems with innovative technology that enhances efficiency, reduces barriers, and ensures better patient care.',
     },
     {
       icon: FaCogs,
       title: 'Our Vision',
-      description: 'We aim to revolutionize healthcare management by developing tools that healthcare professionals can rely on.',
+      description: 'To revolutionize healthcare management by creating trusted, technology-driven tools that empower healthcare professionals and improve patient outcomes.',
     },
     {
       icon: FaUsers,
       title: 'Our Values',
-      description: 'We are dedicated to providing innovative, reliable, and user-friendly solutions for healthcare providers worldwide.',
+      description: 'We are committed to innovation, reliability, and simplicity—delivering user-friendly solutions that empower healthcare providers across Kenya.',
     },
   ];
 
@@ -28,10 +28,12 @@ const AboutUs = () => {
       <div className="bg-light p-8 rounded-lg mb-12 text-center">
         <h1 className="text-4xl font-bold text-primary mb-4">About Us</h1>
         <p className="text-lg text-secondary mb-4">
-          MEDREF is a cutting-edge solution designed to streamline healthcare operations and improve patient care.
+        MEDREF is an innovative platform built to transform healthcare referral systems and optimize care delivery.
+
+
         </p>
         <p className="text-lg text-secondary">
-          Our mission is to revolutionize healthcare management through innovative technology solutions that enhance efficiency, reduce errors, and improve patient outcomes.
+        Our mission is to redefine healthcare management through smart, technology-driven solutions that streamline operations, minimize errors, and ensure better outcomes for both patients and providers.
         </p>
       </div>
 

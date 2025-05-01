@@ -64,7 +64,15 @@ const Footer = () => {
             © {currentYear} MEDREF. All rights reserved.
           </p>
           <p className="mt-2 flex items-center justify-center">
-            Made with <FaHeart className="text-accent mx-1" />  by initials101
+            Made with <FaHeart className="text-accent mx-1" /> by {" "}
+            <a
+              href="https://dennisportfolio-theta.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline hover:text-accent/80"
+            >
+              initials101
+            </a>
           </p>
         </div>
       </div>
