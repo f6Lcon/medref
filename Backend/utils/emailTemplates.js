@@ -29,7 +29,7 @@ const appointmentConfirmationToPatient = (appointment, patient, doctor, hospital
           ${appointment.notes ? `<p><strong>Notes:</strong> ${appointment.notes}</p>` : ""}
         </div>
         
-        <p>Please arrive 15 minutes before your scheduled appointment time. If you need to reschedule or cancel, please contact us at least 24 hours in advance.</p>
+        <p>Please arrive 15 minutes before your scheduled appointment time. If you need to reschedule or cancel, please contact us at least 6 hours in advance.</p>
         
         <p>For any questions, please contact the hospital at ${hospital.contactInfo?.phone || "N/A"} or email at ${hospital.contactInfo?.email || "N/A"}.</p>
         
