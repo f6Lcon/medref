@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaHeartbeat, FaCogs, FaUsers } from 'react-icons/fa';
 import { motion } from 'framer-motion'; // Import motion for animation
-import profilePic from '../assets/profile.jpg'; // Import the profile picture
+import profilePic from '../assets/profile.png'; // Import the profile picture
 
 const AboutUs = () => {
   const features = [
