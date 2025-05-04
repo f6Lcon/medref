@@ -117,4 +117,38 @@ const getPatientById = asyncHandler(async (req, res) => {
   }
 })
 
-export { createPatient, getPatientProfile, updatePatientProfile, getPatients, getPatientById }
+// @desc    Search patients
+// @route   GET /api/patients/search
+// @access  Private
+const searchPatients = asyncHandler(async (req, res) => {
+  const { search } = req.query
+
+  if (!search || search.length < 2) {
+    return res.status(400).json({ message: "Search term must be at least 2 characters" })
+  }
+
+  // Find patients whose name or email contains the search term
+  const patients = await Patient.find().populate({
+    path: "user",
+    match: {
+      $or: [{ name: { $regex: search, $options: "i" } }, { email: { $regex: search, $options: "i" } }],
+    },
+    select: "name email role",
+  })
+
+  // Filter out patients where user is null (no match)
+  const filteredPatients = patients.filter((patient) => patient.user !== null)
+
+  // Format the response to include user details at the top level
+  const formattedPatients = filteredPatients.map((patient) => ({
+    _id: patient.user._id,
+    name: patient.user.name,
+    email: patient.user.email,
+    role: patient.user.role,
+    patientId: patient._id,
+  }))
+
+  res.json(formattedPatients)
+})
+
+export { createPatient, getPatientProfile, updatePatientProfile, getPatients, getPatientById, searchPatients }

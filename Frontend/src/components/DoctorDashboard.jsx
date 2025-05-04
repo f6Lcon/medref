@@ -16,6 +16,7 @@ import {
   FaUserMd,
   FaUsers,
   FaPlus,
+  FaEnvelope,
 } from "react-icons/fa"
 import LoginContext from "../context/LoginContext"
 import AppointmentStatusUpdate from "./AppointmentStatusUpdate"
@@ -23,6 +24,8 @@ import ReferralActions from "./ReferralActions"
 import CreateReferralForm from "./CreateReferralForm"
 import AppointmentFromReferral from "./AppointmentFromReferral"
 import MedicalRecordsList from "./MedicalRecordsList" // Import MedicalRecordsList
+import MessagingInterface from "./Messaging/MessagingInterface"
+import NewConversation from "./Messaging/NewConversation"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
@@ -319,6 +322,16 @@ const DoctorDashboard = () => {
               <FaUserCircle />
               <span>My Profile</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab("messages")}
+              className={`w-full flex items-center space-x-3 p-3 rounded-md transition ${
+                activeTab === "messages" ? "bg-primary text-white" : "hover:bg-gray-100"
+              }`}
+            >
+              <FaEnvelope />
+              <span>Messages</span>
+            </button>
           </nav>
         </div>
 
@@ -394,16 +407,10 @@ const DoctorDashboard = () => {
                   View All
                 </button>
               </div>
-              {appointments && appointments.length > 0 ? (
+              {todaysAppointments.length > 0 ? (
                 <div className="space-y-4">
-                  {appointments
-                    .filter(
-                      (apt) =>
-                        new Date(apt.date).toDateString() === new Date().toDateString() &&
-                        apt.status !== "cancelled" &&
-                        apt.status !== "completed",
-                    )
-                    .sort((a, b) => a.time?.localeCompare(b.time) || 0)
+                  {todaysAppointments
+                    .sort((a, b) => a.time.localeCompare(b.time))
                     .slice(0, 3)
                     .map((appointment) => (
                       <div key={appointment._id} className="border-l-4 border-primary pl-4 py-2">
@@ -855,6 +862,14 @@ const DoctorDashboard = () => {
               </div>
               {/* Add more profile details here */}
             </div>
+          </div>
+        )}
+
+        {/* Messages Tab */}
+        {activeTab === "messages" && (
+          <div className="space-y-6">
+            <NewConversation />
+            <MessagingInterface />
           </div>
         )}
       </div>

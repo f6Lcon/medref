@@ -1,10 +1,14 @@
-import { createContext } from "react"
+"use client"
+
+import { createContext, useContext } from "react"
 
 const LoginContext = createContext({
   isLoggedIn: false,
   setIsLoggedIn: () => {},
   userRole: null,
   setUserRole: () => {},
+  user: null,
+  setUser: () => {},
   permissions: {
     canManageHospitals: false,
     canManageUsers: false,
@@ -17,5 +21,7 @@ const LoginContext = createContext({
   },
   checkPermission: () => false,
 })
+
+export const useLoginContext = () => useContext(LoginContext)
 
 export default LoginContext

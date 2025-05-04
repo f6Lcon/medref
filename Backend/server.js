@@ -13,6 +13,8 @@ import medicalRecordRoutes from "./routes/medicalRecord.routes.js"
 import { notFound, errorHandler } from "./middleware/error.middleware.js"
 import path from "path"
 import { fileURLToPath } from "url"
+import userRoutes from "./routes/user.routes.js"
+import messageRoutes from "./routes/message.routes.js"
 
 dotenv.config()
 
@@ -32,13 +34,6 @@ const __dirname = path.dirname(__filename)
 // Serve uploaded files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 
-
-//Use the frontend app
-//app.use(express.static(path.join(__dirname, "/Frontend/dist")))
-
-// render client for any path
-//app.get('*', (req, res) => res.sendFile(path.join(__dirname, '/Frontend/dist/index.html')))
-
 // Routes
 app.use("/api/auth", authRoutes)
 app.use("/api/patients", patientRoutes)
@@ -48,6 +43,8 @@ app.use("/api/appointments", appointmentRoutes)
 app.use("/api/referrals", referralRoutes)
 app.use("/api/admins", adminRoutes)
 app.use("/api/medical-records", medicalRecordRoutes)
+app.use("/api/users", userRoutes)
+app.use("/api/messages", messageRoutes)
 
 // Error handling middleware
 app.use(notFound)

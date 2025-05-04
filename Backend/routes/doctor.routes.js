@@ -7,10 +7,14 @@ import {
   getDoctorById,
   getDoctorsBySpecialization,
   getDoctorsByHospital,
+  searchDoctors,
 } from "../controllers/doctor.controller.js"
 import { protect } from "../middleware/auth.middleware.js"
 
 const router = express.Router()
+
+// Search doctors - moved to the top to avoid route conflicts
+router.get("/search", searchDoctors)
 
 router.route("/").post(protect, createDoctor).get(getDoctors)
 

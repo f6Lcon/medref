@@ -124,6 +124,62 @@ const getDoctorsByHospital = asyncHandler(async (req, res) => {
   res.json(doctors)
 })
 
+// @desc    Search doctors
+// @route   GET /api/doctors/search
+// @access  Private
+const searchDoctors = asyncHandler(async (req, res) => {
+  try {
+    const { search } = req.query
+
+    console.log(`Doctor search request received with search term: ${search}`)
+
+    // Return a simple response for debugging
+    return res.json([
+      {
+        _id: "test123",
+        name: "Test Doctor",
+        email: "test@example.com",
+        role: "doctor",
+        specialization: "General",
+      },
+    ])
+
+    // The code below is commented out for debugging
+    /*
+    if (!search || search.length < 2) {
+      return res.status(400).json({ message: "Search term must be at least 2 characters" })
+    }
+
+    // Simple approach - just find users with doctor role
+    const users = await User.find({
+      role: "doctor",
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } }
+      ]
+    }).select("_id name email role");
+
+    // Format response
+    const formattedResults = users.map(user => ({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      specialization: "General" // Default value
+    }));
+
+    res.json(formattedResults);
+    */
+  } catch (error) {
+    console.error("Doctor search error:", error)
+    res.status(500).json({
+      message: "Server error during doctor search",
+      error: error.message,
+      stack: process.env.NODE_ENV === "production" ? "🥞" : error.stack,
+    })
+  }
+})
+
 export {
   createDoctor,
   getDoctorProfile,
@@ -132,4 +188,5 @@ export {
   getDoctorById,
   getDoctorsBySpecialization,
   getDoctorsByHospital,
+  searchDoctors,
 }

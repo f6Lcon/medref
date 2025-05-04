@@ -26,6 +26,10 @@ import PatientDashboard from "./components/PatientDashboard"
 import DoctorDashboard from "./components/DoctorDashboard"
 import AdminDashboard from "./components/AdminDashboard"
 import EmailVerification from "./components/EmailVerification"
+// Add these imports
+import MessagingInterface from "./components/Messaging/MessagingInterface"
+import NewConversation from "./components/Messaging/NewConversation"
+import RoleBasedRoute from "./components/RoleBasedRoute"
 
 function App() {
   const [doctors, setDoctors] = useState([
@@ -133,6 +137,7 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userRole, setUserRole] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null) // Add user state
 
   const [permissions, setPermissions] = useState({
     canManageHospitals: false,
@@ -217,7 +222,10 @@ function App() {
         })
         .then((data) => {
           setUserRole(data.role)
+          setUser(data) // Set user data
           setIsLoggedIn(true)
+          // Store user data in localStorage for persistence
+          localStorage.setItem("userData", JSON.stringify(data))
           // Update stored role if it's different
           if (storedRole !== data.role) {
             localStorage.setItem("userRole", data.role)
@@ -227,8 +235,10 @@ function App() {
           console.error("Error fetching user data:", err)
           localStorage.removeItem("token")
           localStorage.removeItem("userRole")
+          localStorage.removeItem("userData")
           setIsLoggedIn(false)
           setUserRole(null)
+          setUser(null)
         })
         .finally(() => {
           setLoading(false)
@@ -237,7 +247,9 @@ function App() {
       setLoading(false)
       setIsLoggedIn(false)
       setUserRole(null)
+      setUser(null)
       localStorage.removeItem("userRole")
+      localStorage.removeItem("userData")
     }
   }, [])
 
@@ -259,6 +271,8 @@ function App() {
         setIsLoggedIn,
         userRole,
         setUserRole,
+        user, // Add user to context
+        setUser, // Add setUser to context
         permissions,
         checkPermission,
       }}
@@ -316,6 +330,23 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/verify-email" element={<EmailVerification />} />
               <Route path="*" element={<NotFound />} />
+              {/* Add these routes inside your Routes component */}
+              <Route
+                path="/messages"
+                element={
+                  <RoleBasedRoute roles={["doctor", "patient", "admin"]}>
+                    <MessagingInterface />
+                  </RoleBasedRoute>
+                }
+              />
+              <Route
+                path="/new-conversation"
+                element={
+                  <RoleBasedRoute roles={["doctor", "patient", "admin"]}>
+                    <NewConversation />
+                  </RoleBasedRoute>
+                }
+              />
             </Routes>
           </main>
           <ScrollToTopButton />

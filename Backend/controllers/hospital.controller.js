@@ -5,7 +5,7 @@ import Hospital from "../models/hospital.model.js"
 // @route   POST /api/hospitals
 // @access  Private/Admin
 const createHospital = asyncHandler(async (req, res) => {
-  const { name, address, contactInfo, facilities, departments, accreditation, operatingHours } = req.body
+  const { name, address, contactInfo, facilities, departments, accreditation, operatingHours, location } = req.body
 
   const hospital = await Hospital.create({
     name,
@@ -15,6 +15,10 @@ const createHospital = asyncHandler(async (req, res) => {
     departments,
     accreditation,
     operatingHours,
+    location: location || {
+      type: "Point",
+      coordinates: [0, 0], // Default coordinates if none provided
+    },
   })
 
   if (hospital) {
@@ -62,6 +66,11 @@ const updateHospital = asyncHandler(async (req, res) => {
     hospital.accreditation = req.body.accreditation || hospital.accreditation
     hospital.operatingHours = req.body.operatingHours || hospital.operatingHours
 
+    // Update location if provided
+    if (req.body.location) {
+      hospital.location = req.body.location
+    }
+
     const updatedHospital = await hospital.save()
     res.json(updatedHospital)
   } else {
@@ -89,10 +98,26 @@ const deleteHospital = asyncHandler(async (req, res) => {
 // @route   GET /api/hospitals/search
 // @access  Public
 const searchHospitals = asyncHandler(async (req, res) => {
-  const { keyword } = req.query
+  const { keyword, lat, lng, radius } = req.query
 
+  // If lat, lng, and radius are provided, search by proximity
+  if (lat && lng && radius) {
+    const hospitals = await Hospital.find({
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [Number.parseFloat(lng), Number.parseFloat(lat)],
+          },
+          $maxDistance: Number.parseInt(radius) * 1000, // Convert km to meters
+        },
+      },
+    })
+    return res.json(hospitals)
+  }
+
+  // Otherwise, search by name or city
   const nameFilter = keyword ? { name: { $regex: keyword, $options: "i" } } : {}
-
   const cityFilter = keyword ? { "address.city": { $regex: keyword, $options: "i" } } : {}
 
   const hospitals = await Hospital.find({
@@ -102,4 +127,38 @@ const searchHospitals = asyncHandler(async (req, res) => {
   res.json(hospitals)
 })
 
-export { createHospital, getHospitals, getHospitalById, updateHospital, deleteHospital, searchHospitals }
+// @desc    Get hospitals near a location
+// @route   GET /api/hospitals/near
+// @access  Public
+const getNearbyHospitals = asyncHandler(async (req, res) => {
+  const { lat, lng, radius = 10 } = req.query // Default radius is 10km
+
+  if (!lat || !lng) {
+    res.status(400)
+    throw new Error("Latitude and longitude are required")
+  }
+
+  const hospitals = await Hospital.find({
+    location: {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: [Number.parseFloat(lng), Number.parseFloat(lat)],
+        },
+        $maxDistance: Number.parseInt(radius) * 1000, // Convert km to meters
+      },
+    },
+  })
+
+  res.json(hospitals)
+})
+
+export {
+  createHospital,
+  getHospitals,
+  getHospitalById,
+  updateHospital,
+  deleteHospital,
+  searchHospitals,
+  getNearbyHospitals,
+}

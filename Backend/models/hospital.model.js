@@ -13,6 +13,17 @@ const hospitalSchema = mongoose.Schema(
       zipCode: { type: String, required: true },
       country: { type: String, required: true },
     },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        default: [0, 0],
+      },
+    },
     contactInfo: {
       email: { type: String, required: true },
       phone: { type: String, required: true },
@@ -36,6 +47,9 @@ const hospitalSchema = mongoose.Schema(
     timestamps: true,
   },
 )
+
+// Create a geospatial index on the location field
+hospitalSchema.index({ location: "2dsphere" })
 
 const Hospital = mongoose.model("Hospital", hospitalSchema)
 

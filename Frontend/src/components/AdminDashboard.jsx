@@ -22,21 +22,12 @@ import {
   FaEdit,
   FaTrash,
   FaTimes,
-  FaSync,
-  FaServer,
-  FaTable,
-  FaKey,
-  FaSave,
-  FaExclamationTriangle,
 } from "react-icons/fa"
 import LoginContext from "../context/LoginContext"
 import AddHospitalForm from "./AddHospitalForm"
 import AddDoctorForm from "./AddDoctorForm"
 import ReportGenerator from "./ReportGenerator"
 import EditUserModal from "./EditUserModal"
-import DeleteConfirmationModal from "./DeleteConfirmationModal"
-// Add the import for AppointmentEditModal at the top of the file
-import AppointmentEditModal from "./AppointmentEditModal"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
@@ -59,22 +50,12 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [showAddDoctorForm, setShowAddDoctorForm] = useState(false)
-  const [showEditUserModal, setShowEditUserModal] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedUser, setSelectedUser] = useState(null)
-  const [dbStats, setDbStats] = useState({
-    collections: 0,
-    documents: 0,
-    size: "0 MB",
-    indexes: 0,
-  })
-  const [refreshing, setRefreshing] = useState(false)
   const navigate = useNavigate()
   const { setIsLoggedIn, setUserRole } = useContext(LoginContext)
-  // Add this to the component state declarations (near the top where other state variables are defined)
-  const [showEditAppointmentModal, setShowEditAppointmentModal] = useState(false)
-  const [selectedAppointment, setSelectedAppointment] = useState(null)
-  const [showDeleteAppointmentModal, setShowDeleteAppointmentModal] = useState(false)
+
+  const [editingUser, setEditingUser] = useState(null)
+  const [deletingUser, setDeletingUser] = useState(null)
+  const [userActionLoading, setUserActionLoading] = useState(false)
 
   const fetchData = async () => {
     const token = localStorage.getItem("token")
@@ -94,7 +75,7 @@ const AdminDashboard = () => {
 
       // Fetch all users
       try {
-        const usersResponse = await axios.get(`${API_URL}/api/auth/users`, {
+        const usersResponse = await axios.get(`${API_URL}/api/users`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         setUsers(usersResponse.data || [])
@@ -190,30 +171,6 @@ const AdminDashboard = () => {
         setReferrals([])
       }
 
-      // Fetch database stats
-      try {
-        const dbStatsResponse = await axios.get(`${API_URL}/api/admin/db-stats`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        setDbStats(
-          dbStatsResponse.data || {
-            collections: 8,
-            documents: 120,
-            size: "24.5 MB",
-            indexes: 0,
-          },
-        )
-      } catch (err) {
-        console.error("Error fetching database stats:", err)
-        // Set mock database stats
-        setDbStats({
-          collections: 8,
-          documents: 120,
-          size: "24.5 MB",
-          indexes: 16,
-        })
-      }
-
       // Set statistics
       setStats({
         totalPatients: patientsResponse?.data?.length || 0,
@@ -234,7 +191,6 @@ const AdminDashboard = () => {
       }
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
   }
 
@@ -344,147 +300,72 @@ const AdminDashboard = () => {
   }
 
   const handleEditUser = (user) => {
-    setSelectedUser(user)
-    setShowEditUserModal(true)
+    setEditingUser(user)
+  }
+
+  const handleUpdateUser = async (userId, updatedData) => {
+    try {
+      setUserActionLoading(true)
+      setError("")
+
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setError("You must be logged in to update users")
+        setUserActionLoading(false)
+        return
+      }
+
+      const response = await axios.put(`${API_URL}/api/users/${userId}`, updatedData, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      // Update the users list with the updated user
+      setUsers(users.map((user) => (user._id === userId ? { ...user, ...updatedData } : user)))
+
+      setEditingUser(null)
+      alert("User updated successfully!")
+    } catch (err) {
+      console.error("Error updating user:", err)
+      setError(err.response?.data?.message || "Failed to update user")
+    } finally {
+      setUserActionLoading(false)
+    }
   }
 
   const handleDeleteUser = (user) => {
-    setSelectedUser(user)
-    setShowDeleteModal(true)
-  }
-
-  const handleUserUpdate = (updatedUser) => {
-    // Update the user in the users list
-    setUsers(users.map((user) => (user._id === updatedUser._id ? updatedUser : user)))
-
-    // If the user is a doctor, update them in the doctors list too
-    if (updatedUser.role === "doctor") {
-      setDoctors(
-        doctors.map((doctor) => {
-          if (doctor.user && doctor.user._id === updatedUser._id) {
-            return { ...doctor, user: updatedUser }
-          }
-          return doctor
-        }),
-      )
-    }
-    // If the user is a patient, update them in the patients list too
-    else if (updatedUser.role === "patient") {
-      setPatients(
-        patients.map((patient) => {
-          if (patient.user && patient.user._id === updatedUser._id) {
-            return { ...patient, user: updatedUser }
-          }
-          return patient
-        }),
-      )
-    }
-
-    setShowEditUserModal(false)
-    setSelectedUser(null)
-
-    // Show success message
-    alert("User updated successfully!")
-
-    // Refresh data to ensure everything is in sync
-    refreshData()
+    setDeletingUser(user)
   }
 
   const confirmDeleteUser = async () => {
-    if (!selectedUser) return
-
     try {
-      const token = localStorage.getItem("token")
-      console.log("Deleting user with ID:", selectedUser._id)
+      setUserActionLoading(true)
+      setError("")
 
-      // Delete the user
-      await axios.delete(`${API_URL}/api/auth/users/${selectedUser._id}`, {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setError("You must be logged in to delete users")
+        setUserActionLoading(false)
+        return
+      }
+
+      await axios.delete(`${API_URL}/api/users/${deletingUser._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
 
-      // Remove user from the list
-      setUsers(users.filter((user) => user._id !== selectedUser._id))
+      // Remove the deleted user from the users list
+      setUsers(users.filter((user) => user._id !== deletingUser._id))
 
-      // If the user was a doctor, remove them from the doctors list
-      if (selectedUser.role === "doctor") {
-        setDoctors(doctors.filter((doctor) => !(doctor.user && doctor.user._id === selectedUser._id)))
-      }
-      // If the user was a patient, remove them from the patients list
-      else if (selectedUser.role === "patient") {
-        setPatients(patients.filter((patient) => !(patient.user && patient.user._id === selectedUser._id)))
-      }
-
-      setShowDeleteModal(false)
-      setSelectedUser(null)
-
-      // Show success message
+      setDeletingUser(null)
       alert("User deleted successfully!")
-
-      // Refresh data to ensure everything is in sync
-      refreshData()
     } catch (err) {
       console.error("Error deleting user:", err)
-      alert(
-        err.response?.status === 404
-          ? "User not found. The API endpoint may be incorrect."
-          : err.response?.data?.message || "Failed to delete user. Please try again.",
-      )
+      setError(err.response?.data?.message || "Failed to delete user")
+    } finally {
+      setUserActionLoading(false)
     }
   }
 
-  const refreshData = () => {
-    setRefreshing(true)
-    fetchData()
-  }
-
-  const handleDeleteAppointment = (appointmentId) => {
-    setSelectedAppointment({ _id: appointmentId })
-    setShowDeleteAppointmentModal(true)
-  }
-
-  const confirmDeleteAppointment = async () => {
-    if (!selectedAppointment) return
-
-    try {
-      const token = localStorage.getItem("token")
-      console.log("Deleting appointment with ID:", selectedAppointment._id)
-
-      await axios.delete(`${API_URL}/api/appointments/${selectedAppointment._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      // Remove appointment from the list
-      setAppointments(appointments.filter((appt) => appt._id !== selectedAppointment._id))
-
-      setShowDeleteAppointmentModal(false)
-      setSelectedAppointment(null)
-      alert("Appointment deleted successfully!")
-    } catch (err) {
-      console.error("Error deleting appointment:", err)
-      alert(
-        err.response?.status === 404
-          ? "Appointment not found. The API endpoint may be incorrect."
-          : err.response?.data?.message || "Failed to delete appointment. Please try again.",
-      )
-    }
-  }
-
-  // Add this function to handle appointment updates
-  const handleAppointmentUpdate = (updatedAppointment) => {
-    // Update the appointment in the appointments list
-    setAppointments(appointments.map((appt) => (appt._id === updatedAppointment._id ? updatedAppointment : appt)))
-
-    setShowEditAppointmentModal(false)
-    setSelectedAppointment(null)
-    alert("Appointment updated successfully!")
-  }
-
-  const handleEditAppointment = (appointment) => {
-    setSelectedAppointment(appointment)
-    setShowEditAppointmentModal(true)
-  }
-
-  if (loading && !refreshing) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-light flex items-center justify-center">
         <div className="text-center">
@@ -651,13 +532,6 @@ const AdminDashboard = () => {
           </div>
 
           <div className="mt-4 md:mt-0 flex space-x-2">
-            <button
-              onClick={refreshData}
-              className="flex items-center space-x-2 bg-white p-2 rounded-md shadow-sm"
-              disabled={refreshing}
-            >
-              <FaSync className={`text-gray-400 ${refreshing ? "animate-spin" : ""}`} />
-            </button>
             <button className="flex items-center space-x-2 bg-white p-2 rounded-md shadow-sm">
               <FaBell className="text-gray-400" />
               <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -1092,7 +966,15 @@ const AdminDashboard = () => {
                 >
                   <FaTimes size={20} />
                 </button>
-                <AddDoctorForm onSuccess={handleDoctorSuccess} onCancel={() => setShowAddDoctorForm(false)} />
+                <AddDoctorForm
+                  onSuccess={handleDoctorSuccess}
+                  onCancel={() => setShowAddDoctorForm(false)}
+                  handleAddDoctor={handleAddDoctor}
+                  newDoctorData={newDoctorData}
+                  setNewDoctorData={setNewDoctorData}
+                  loading={loading}
+                  error={error}
+                />
               </div>
             ) : (
               <div className="bg-white p-6 rounded-lg shadow-md">
@@ -1172,16 +1054,10 @@ const AdminDashboard = () => {
                               <div className="text-sm text-gray-500">{doctor.contactInfo?.phone}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <button
-                                onClick={() => handleEditUser(doctor.user)}
-                                className="text-primary hover:text-accent mr-3"
-                              >
+                              <button className="text-primary hover:text-accent mr-3">
                                 <FaEdit /> Edit
                               </button>
-                              <button
-                                onClick={() => handleDeleteUser(doctor.user)}
-                                className="text-red-600 hover:text-red-900"
-                              >
+                              <button className="text-red-600 hover:text-red-900">
                                 <FaTrash /> Delete
                               </button>
                             </td>
@@ -1424,16 +1300,10 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button
-                              onClick={() => handleEditAppointment(appointment)}
-                              className="text-primary hover:text-accent mr-3"
-                            >
+                            <button className="text-primary hover:text-accent mr-3">
                               <FaEdit /> Edit
                             </button>
-                            <button
-                              onClick={() => handleDeleteAppointment(appointment._id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
+                            <button className="text-red-600 hover:text-red-900">
                               <FaTrash /> Delete
                             </button>
                           </td>
@@ -1448,143 +1318,6 @@ const AdminDashboard = () => {
                     )}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Database Management Tab */}
-        {activeTab === "database" && (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">Database Management</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-gray-700">Collections</h3>
-                    <FaTable className="text-primary" />
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">{dbStats.collections}</p>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-gray-700">Documents</h3>
-                    <FaDatabase className="text-primary" />
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">{dbStats.documents}</p>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-gray-700">Database Size</h3>
-                    <FaServer className="text-primary" />
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">{dbStats.size}</p>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-gray-700">Indexes</h3>
-                    <FaKey className="text-primary" />
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">{dbStats.indexes}</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                    <h3 className="text-sm font-medium text-gray-700">Database Operations</h3>
-                  </div>
-                  <div className="p-4 space-y-4">
-                    <div className="flex flex-wrap gap-3">
-                      <button className="bg-primary text-white px-4 py-2 rounded-md hover:bg-accent transition flex items-center">
-                        <FaSave className="mr-2" /> Backup Database
-                      </button>
-                      <button className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition flex items-center">
-                        <FaSync className="mr-2" /> Optimize Database
-                      </button>
-                      <button className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition flex items-center">
-                        <FaExclamationTriangle className="mr-2" /> Clear Test Data
-                      </button>
-                    </div>
-
-                    <div className="mt-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Database Connection</h4>
-                      <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
-                        <code className="text-xs text-gray-800">mongodb://localhost:27017/medical-referral-system</code>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                    <h3 className="text-sm font-medium text-gray-700">Collection Management</h3>
-                  </div>
-                  <div className="p-4">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Collection Name
-                            </th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Documents
-                            </th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Size
-                            </th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Actions
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          <tr>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">users</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">42</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">2.3 MB</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                              <button className="text-primary hover:text-accent mr-2">View</button>
-                              <button className="text-red-600 hover:text-red-900">Clear</button>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">doctors</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">18</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">4.7 MB</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                              <button className="text-primary hover:text-accent mr-2">View</button>
-                              <button className="text-red-600 hover:text-red-900">Clear</button>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">patients</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">24</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">5.1 MB</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                              <button className="text-primary hover:text-accent mr-2">View</button>
-                              <button className="text-red-600 hover:text-red-900">Clear</button>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">appointments</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">36</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">3.8 MB</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                              <button className="text-primary hover:text-accent mr-2">View</button>
-                              <button className="text-red-600 hover:text-red-900">Clear</button>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1677,40 +1410,41 @@ const AdminDashboard = () => {
       </div>
 
       {/* Edit User Modal */}
-      {showEditUserModal && selectedUser && (
-        <EditUserModal user={selectedUser} onClose={() => setShowEditUserModal(false)} onSave={handleUserUpdate} />
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSave={handleUpdateUser}
+          loading={userActionLoading}
+        />
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedUser && (
-        <DeleteConfirmationModal
-          title="Delete User"
-          message={`Are you sure you want to delete ${selectedUser.name}? This action cannot be undone.`}
-          onConfirm={confirmDeleteUser}
-          onCancel={() => {
-            setShowDeleteModal(false)
-            setSelectedUser(null)
-          }}
-        />
-      )}
-      {showDeleteAppointmentModal && selectedAppointment && (
-        <DeleteConfirmationModal
-          title="Delete Appointment"
-          message="Are you sure you want to delete this appointment? This action cannot be undone."
-          onConfirm={confirmDeleteAppointment}
-          onCancel={() => {
-            setShowDeleteAppointmentModal(false)
-            setSelectedAppointment(null)
-          }}
-        />
-      )}
-      {/* Add the AppointmentEditModal to the JSX at the end of the component */}
-      {showEditAppointmentModal && selectedAppointment && (
-        <AppointmentEditModal
-          appointment={selectedAppointment}
-          onClose={() => setShowEditAppointmentModal(false)}
-          onSave={handleAppointmentUpdate}
-        />
+      {deletingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Confirm Deletion</h2>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete the user <span className="font-semibold">{deletingUser.name}</span>? This
+              action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeletingUser(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteUser}
+                disabled={userActionLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {userActionLoading ? "Deleting..." : "Delete User"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -15,6 +15,7 @@ import {
   FaExchangeAlt,
   FaFileMedical,
   FaUserMd,
+  FaEnvelope,
 } from "react-icons/fa"
 import LoginContext from "../context/LoginContext"
 import BookAppointmentForm from "./BookAppointmentForm"
@@ -22,6 +23,8 @@ import HospitalSearch from "./HospitalSearch"
 import DoctorSearch from "./DoctorSearch"
 import MedicalRecordUpload from "./MedicalRecordUpload"
 import MedicalRecordsList from "./MedicalRecordsList"
+import MessagingInterface from "./Messaging/MessagingInterface"
+import NewConversation from "./Messaging/NewConversation"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
@@ -36,6 +39,14 @@ const PatientDashboard = () => {
   const [selectedHospital, setSelectedHospital] = useState(null)
   const navigate = useNavigate()
   const { setIsLoggedIn, setUserRole } = useContext(LoginContext)
+
+  const [medicalInfo, setMedicalInfo] = useState({
+    medicalHistory: "",
+    allergies: "",
+    currentMedications: "",
+  })
+  const [savingMedical, setSavingMedical] = useState(false)
+  const [medicalSuccess, setMedicalSuccess] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,6 +101,20 @@ const PatientDashboard = () => {
     fetchData()
   }, [navigate, setIsLoggedIn, setUserRole])
 
+  useEffect(() => {
+    if (userData?.patientData) {
+      setMedicalInfo({
+        medicalHistory: userData.patientData.medicalHistory || "",
+        allergies: Array.isArray(userData.patientData.allergies)
+          ? userData.patientData.allergies.join(", ")
+          : userData.patientData.allergies || "",
+        currentMedications: Array.isArray(userData.patientData.currentMedications)
+          ? userData.patientData.currentMedications.join(", ")
+          : userData.patientData.currentMedications || "",
+      })
+    }
+  }, [userData])
+
   const handleLogout = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("userRole")
@@ -112,6 +137,62 @@ const PatientDashboard = () => {
     // You would typically refresh the medical records list here
     // For now, we'll just show a success message
     alert("Medical record uploaded successfully!")
+  }
+
+  const handleSaveMedicalInfo = async () => {
+    try {
+      setSavingMedical(true)
+      setError("")
+
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setError("You must be logged in to update your profile")
+        setSavingMedical(false)
+        return
+      }
+
+      // Convert comma-separated strings to arrays
+      const allergiesArray = medicalInfo.allergies
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item !== "")
+
+      const medicationsArray = medicalInfo.currentMedications
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item !== "")
+
+      const response = await axios.put(
+        `${API_URL}/api/patients/profile`,
+        {
+          medicalHistory: medicalInfo.medicalHistory,
+          allergies: allergiesArray,
+          currentMedications: medicationsArray,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
+
+      // Update the user data with the new information
+      setUserData({
+        ...userData,
+        patientData: {
+          ...userData.patientData,
+          medicalHistory: medicalInfo.medicalHistory,
+          allergies: allergiesArray,
+          currentMedications: medicationsArray,
+        },
+      })
+
+      setMedicalSuccess(true)
+      setTimeout(() => setMedicalSuccess(false), 3000)
+    } catch (err) {
+      console.error("Error updating medical information:", err)
+      setError(err.response?.data?.message || "Failed to update medical information")
+    } finally {
+      setSavingMedical(false)
+    }
   }
 
   if (loading) {
@@ -215,6 +296,16 @@ const PatientDashboard = () => {
               <FaUserCircle />
               <span>My Profile</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab("messages")}
+              className={`w-full flex items-center space-x-3 p-3 rounded-md transition ${
+                activeTab === "messages" ? "bg-accent text-white" : "hover:bg-gray-100"
+              }`}
+            >
+              <FaEnvelope />
+              <span>Messages</span>
+            </button>
           </nav>
         </div>
 
@@ -249,7 +340,9 @@ const PatientDashboard = () => {
                         ? "Hospitals"
                         : activeTab === "records"
                           ? "Medical Records"
-                          : "My Profile"}
+                          : activeTab === "profile"
+                            ? "My Profile"
+                            : "Messages"}
             </h1>
             <p className="text-gray-500">
               Welcome back, {userData?.name || "Patient"}. Here's what's happening with your health.
@@ -288,10 +381,10 @@ const PatientDashboard = () => {
                   View All
                 </button>
               </div>
-              {appointments && appointments.length > 0 ? (
+              {appointments.length > 0 ? (
                 <div className="space-y-4">
                   {appointments
-                    .filter((apt) => new Date(apt.date) >= new Date() && apt.status !== "cancelled")
+                    .filter((apt) => new Date(apt.date) >= new Date())
                     .sort((a, b) => new Date(a.date) - new Date(b.date))
                     .slice(0, 3)
                     .map((appointment) => (
@@ -924,7 +1017,8 @@ const PatientDashboard = () => {
                   <textarea
                     id="medicalHistory"
                     rows={4}
-                    value={userData?.patientData?.medicalHistory || ""}
+                    value={medicalInfo.medicalHistory}
+                    onChange={(e) => setMedicalInfo({ ...medicalInfo, medicalHistory: e.target.value })}
                     className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-accent"
                     placeholder="Enter any relevant medical history"
                   ></textarea>
@@ -936,7 +1030,8 @@ const PatientDashboard = () => {
                   <input
                     type="text"
                     id="allergies"
-                    value={(userData?.patientData?.allergies || []).join(", ")}
+                    value={medicalInfo.allergies}
+                    onChange={(e) => setMedicalInfo({ ...medicalInfo, allergies: e.target.value })}
                     className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-accent"
                     placeholder="Enter allergies separated by commas"
                   />
@@ -948,18 +1043,33 @@ const PatientDashboard = () => {
                   <input
                     type="text"
                     id="medications"
-                    value={(userData?.patientData?.currentMedications || []).join(", ")}
+                    value={medicalInfo.currentMedications}
+                    onChange={(e) => setMedicalInfo({ ...medicalInfo, currentMedications: e.target.value })}
                     className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-accent"
                     placeholder="Enter current medications separated by commas"
                   />
                 </div>
               </div>
               <div className="mt-6">
-                <button className="bg-accent text-white py-2 px-4 rounded-md hover:bg-primary hover:text-accent transition">
+                <button
+                  onClick={handleSaveMedicalInfo}
+                  className="bg-accent text-white py-2 px-4 rounded-md hover:bg-primary hover:text-accent transition"
+                >
                   Save Changes
                 </button>
               </div>
+              {medicalSuccess && (
+                <div className="mt-2 text-sm text-green-600">Medical information updated successfully!</div>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* Messages Tab */}
+        {activeTab === "messages" && (
+          <div className="space-y-6">
+            <NewConversation />
+            <MessagingInterface />
           </div>
         )}
 
