@@ -1,34 +1,6 @@
 import asyncHandler from "express-async-handler"
 import Hospital from "../models/hospital.model.js"
 
-// @desc    Create a hospital
-// @route   POST /api/hospitals
-// @access  Private/Admin
-const createHospital = asyncHandler(async (req, res) => {
-  const { name, address, contactInfo, facilities, departments, accreditation, operatingHours, location } = req.body
-
-  const hospital = await Hospital.create({
-    name,
-    address,
-    contactInfo,
-    facilities,
-    departments,
-    accreditation,
-    operatingHours,
-    location: location || {
-      type: "Point",
-      coordinates: [0, 0], // Default coordinates if none provided
-    },
-  })
-
-  if (hospital) {
-    res.status(201).json(hospital)
-  } else {
-    res.status(400)
-    throw new Error("Invalid hospital data")
-  }
-})
-
 // @desc    Get all hospitals
 // @route   GET /api/hospitals
 // @access  Public
@@ -51,24 +23,45 @@ const getHospitalById = asyncHandler(async (req, res) => {
   }
 })
 
-// @desc    Update hospital
+// @desc    Create a hospital
+// @route   POST /api/hospitals
+// @access  Private/Admin
+const createHospital = asyncHandler(async (req, res) => {
+  const { name, address, contactInfo, departments, facilities, operatingHours, location } = req.body
+
+  const hospital = new Hospital({
+    name,
+    address,
+    contactInfo,
+    departments,
+    facilities,
+    operatingHours,
+    location: location || { type: "Point", coordinates: [0, 0] },
+  })
+
+  const createdHospital = await hospital.save()
+  res.status(201).json(createdHospital)
+})
+
+// @desc    Update a hospital
 // @route   PUT /api/hospitals/:id
 // @access  Private/Admin
 const updateHospital = asyncHandler(async (req, res) => {
+  const { name, address, contactInfo, departments, facilities, operatingHours, location } = req.body
+
   const hospital = await Hospital.findById(req.params.id)
 
   if (hospital) {
-    hospital.name = req.body.name || hospital.name
-    hospital.address = req.body.address || hospital.address
-    hospital.contactInfo = req.body.contactInfo || hospital.contactInfo
-    hospital.facilities = req.body.facilities || hospital.facilities
-    hospital.departments = req.body.departments || hospital.departments
-    hospital.accreditation = req.body.accreditation || hospital.accreditation
-    hospital.operatingHours = req.body.operatingHours || hospital.operatingHours
+    hospital.name = name || hospital.name
+    hospital.address = address || hospital.address
+    hospital.contactInfo = contactInfo || hospital.contactInfo
+    hospital.departments = departments || hospital.departments
+    hospital.facilities = facilities || hospital.facilities
+    hospital.operatingHours = operatingHours || hospital.operatingHours
 
     // Update location if provided
-    if (req.body.location) {
-      hospital.location = req.body.location
+    if (location) {
+      hospital.location = location
     }
 
     const updatedHospital = await hospital.save()
@@ -79,7 +72,7 @@ const updateHospital = asyncHandler(async (req, res) => {
   }
 })
 
-// @desc    Delete hospital
+// @desc    Delete a hospital
 // @route   DELETE /api/hospitals/:id
 // @access  Private/Admin
 const deleteHospital = asyncHandler(async (req, res) => {
@@ -94,14 +87,21 @@ const deleteHospital = asyncHandler(async (req, res) => {
   }
 })
 
-// @desc    Search hospitals by name or location
-// @route   GET /api/hospitals/search
+// @desc    Get hospitals near a location
+// @route   GET /api/hospitals/near
 // @access  Public
-const searchHospitals = asyncHandler(async (req, res) => {
-  const { keyword, lat, lng, radius } = req.query
+const getNearbyHospitals = asyncHandler(async (req, res) => {
+  const { lat, lng, radius = 20 } = req.query // radius in kilometers, default 20km
 
-  // If lat, lng, and radius are provided, search by proximity
-  if (lat && lng && radius) {
+  if (!lat || !lng) {
+    res.status(400)
+    throw new Error("Latitude and longitude are required")
+  }
+
+  // Convert radius from km to meters
+  const radiusInMeters = Number.parseInt(radius) * 1000
+
+  try {
     const hospitals = await Hospital.find({
       location: {
         $near: {
@@ -109,56 +109,19 @@ const searchHospitals = asyncHandler(async (req, res) => {
             type: "Point",
             coordinates: [Number.parseFloat(lng), Number.parseFloat(lat)],
           },
-          $maxDistance: Number.parseInt(radius) * 1000, // Convert km to meters
+          $maxDistance: radiusInMeters,
         },
       },
     })
-    return res.json(hospitals)
+
+    res.json(hospitals)
+  } catch (error) {
+    console.error("Error finding nearby hospitals:", error)
+
+    // If geospatial query fails (e.g., no index), fall back to all hospitals
+    const allHospitals = await Hospital.find({})
+    res.json(allHospitals)
   }
-
-  // Otherwise, search by name or city
-  const nameFilter = keyword ? { name: { $regex: keyword, $options: "i" } } : {}
-  const cityFilter = keyword ? { "address.city": { $regex: keyword, $options: "i" } } : {}
-
-  const hospitals = await Hospital.find({
-    $or: [nameFilter, cityFilter],
-  })
-
-  res.json(hospitals)
 })
 
-// @desc    Get hospitals near a location
-// @route   GET /api/hospitals/near
-// @access  Public
-const getNearbyHospitals = asyncHandler(async (req, res) => {
-  const { lat, lng, radius = 10 } = req.query // Default radius is 10km
-
-  if (!lat || !lng) {
-    res.status(400)
-    throw new Error("Latitude and longitude are required")
-  }
-
-  const hospitals = await Hospital.find({
-    location: {
-      $near: {
-        $geometry: {
-          type: "Point",
-          coordinates: [Number.parseFloat(lng), Number.parseFloat(lat)],
-        },
-        $maxDistance: Number.parseInt(radius) * 1000, // Convert km to meters
-      },
-    },
-  })
-
-  res.json(hospitals)
-})
-
-export {
-  createHospital,
-  getHospitals,
-  getHospitalById,
-  updateHospital,
-  deleteHospital,
-  searchHospitals,
-  getNearbyHospitals,
-}
+export { getHospitals, getHospitalById, createHospital, updateHospital, deleteHospital, getNearbyHospitals }

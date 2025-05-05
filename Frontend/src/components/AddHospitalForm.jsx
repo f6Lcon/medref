@@ -3,45 +3,9 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet"
-import "leaflet/dist/leaflet.css"
-import L from "leaflet"
 import { FaHospital, FaMapMarkerAlt, FaPhone, FaEnvelope, FaGlobe, FaClock, FaBuilding, FaMapPin } from "react-icons/fa"
 
-// Fix the marker icon issue in Leaflet
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-})
-
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
-
-// Component to handle map clicks and marker placement
-const LocationMarker = ({ position, setPosition }) => {
-  const map = useMapEvents({
-    click(e) {
-      setPosition([e.latlng.lat, e.latlng.lng])
-    },
-  })
-
-  return position ? (
-    <Marker
-      position={position}
-      icon={
-        new L.Icon({
-          iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
-          shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowSize: [41, 41],
-        })
-      }
-    />
-  ) : null
-}
 
 const AddHospitalForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -80,30 +44,14 @@ const AddHospitalForm = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const [mapCenter, setMapCenter] = useState([51.505, -0.09]) // Default to London
-  const [markerPosition, setMarkerPosition] = useState(null)
   const [addressLookupLoading, setAddressLookupLoading] = useState(false)
+  const [coordinates, setCoordinates] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Get user's location for initial map center
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords
-          setMapCenter([latitude, longitude])
-        },
-        (error) => {
-          console.error("Error getting location:", error)
-        },
-      )
-    }
-  }, [])
-
-  // Update coordinates when marker position changes
-  useEffect(() => {
-    if (markerPosition) {
-      const [lat, lng] = markerPosition
+    // Update coordinates in form data when they change
+    if (coordinates) {
+      const [lat, lng] = coordinates
       setFormData({
         ...formData,
         location: {
@@ -112,7 +60,7 @@ const AddHospitalForm = ({ onSuccess }) => {
         },
       })
     }
-  }, [markerPosition])
+  }, [coordinates])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -180,24 +128,14 @@ const AddHospitalForm = ({ onSuccess }) => {
       if (response.data && response.data.length > 0) {
         const { lat, lon } = response.data[0]
 
-        // Update marker position and map center
-        setMarkerPosition([Number.parseFloat(lat), Number.parseFloat(lon)])
-        setMapCenter([Number.parseFloat(lat), Number.parseFloat(lon)])
-
-        // Update form data
-        setFormData({
-          ...formData,
-          location: {
-            type: "Point",
-            coordinates: [Number.parseFloat(lon), Number.parseFloat(lat)], // MongoDB uses [longitude, latitude]
-          },
-        })
+        // Update coordinates
+        setCoordinates([Number.parseFloat(lat), Number.parseFloat(lon)])
       } else {
         setError("Could not find coordinates for this address")
       }
     } catch (err) {
       console.error("Error geocoding address:", err)
-      setError("Error looking up coordinates. Please place the marker manually.")
+      setError("Error looking up coordinates. Please enter coordinates manually.")
     } finally {
       setAddressLookupLoading(false)
     }
@@ -294,7 +232,7 @@ const AddHospitalForm = ({ onSuccess }) => {
         },
       })
 
-      setMarkerPosition(null)
+      setCoordinates(null)
 
       // Call success callback if provided
       if (onSuccess) {
@@ -454,45 +392,57 @@ const AddHospitalForm = ({ onSuccess }) => {
           </div>
         </div>
 
-        {/* Map for Location Selection */}
+        {/* Location Coordinates */}
         <div>
           <h3 className="text-lg font-medium text-gray-800 mb-3">
             <FaMapPin className="inline mr-2" /> Hospital Location
           </h3>
           <p className="text-sm text-gray-600 mb-2">
-            Click on the map to set the hospital's exact location or use the button above to find coordinates from the
+            Enter the hospital's exact location coordinates or use the button above to find coordinates from the
             address.
           </p>
 
-          <div className="h-[400px] rounded-lg overflow-hidden border border-gray-300 mb-2">
-            <MapContainer center={mapCenter} zoom={13} style={{ height: "100%", width: "100%" }}>
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <LocationMarker position={markerPosition} setPosition={setMarkerPosition} />
-            </MapContainer>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+              <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-1">
+                Latitude
+              </label>
               <input
-                type="text"
-                value={markerPosition ? markerPosition[0] : ""}
-                className="w-full border border-gray-300 rounded-md p-2 bg-gray-50"
-                readOnly
+                type="number"
+                id="latitude"
+                step="any"
+                value={coordinates ? coordinates[0] : ""}
+                onChange={(e) => {
+                  const lat = Number.parseFloat(e.target.value)
+                  const lng = coordinates ? coordinates[1] : 0
+                  setCoordinates([lat, lng])
+                }}
+                className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="e.g. 40.7128"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+              <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 mb-1">
+                Longitude
+              </label>
               <input
-                type="text"
-                value={markerPosition ? markerPosition[1] : ""}
-                className="w-full border border-gray-300 rounded-md p-2 bg-gray-50"
-                readOnly
+                type="number"
+                id="longitude"
+                step="any"
+                value={coordinates ? coordinates[1] : ""}
+                onChange={(e) => {
+                  const lng = Number.parseFloat(e.target.value)
+                  const lat = coordinates ? coordinates[0] : 0
+                  setCoordinates([lat, lng])
+                }}
+                className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="e.g. -74.0060"
               />
             </div>
+          </div>
+
+          <div className="mt-2 text-sm text-gray-500">
+            <p>Note: You can view and interact with hospital locations on the Hospitals page after adding them.</p>
           </div>
         </div>
 

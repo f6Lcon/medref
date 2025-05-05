@@ -11,7 +11,24 @@ const hospitalSchema = mongoose.Schema(
       city: { type: String, required: true },
       state: { type: String, required: true },
       zipCode: { type: String, required: true },
-      country: { type: String, required: true },
+      country: { type: String, default: "United States" },
+    },
+    contactInfo: {
+      phone: { type: String, required: true },
+      email: { type: String },
+      website: { type: String },
+    },
+    departments: [{ type: String }],
+    facilities: [{ type: String }],
+    operatingHours: {
+      weekdays: {
+        open: { type: String },
+        close: { type: String },
+      },
+      weekends: {
+        open: { type: String },
+        close: { type: String },
+      },
     },
     location: {
       type: {
@@ -24,31 +41,13 @@ const hospitalSchema = mongoose.Schema(
         default: [0, 0],
       },
     },
-    contactInfo: {
-      email: { type: String, required: true },
-      phone: { type: String, required: true },
-      website: { type: String },
-    },
-    facilities: [String],
-    departments: [String],
-    accreditation: [String],
-    operatingHours: {
-      weekdays: {
-        open: { type: String },
-        close: { type: String },
-      },
-      weekends: {
-        open: { type: String },
-        close: { type: String },
-      },
-    },
   },
   {
     timestamps: true,
   },
 )
 
-// Create a geospatial index on the location field
+// Create a 2dsphere index on the location field for geospatial queries
 hospitalSchema.index({ location: "2dsphere" })
 
 const Hospital = mongoose.model("Hospital", hospitalSchema)

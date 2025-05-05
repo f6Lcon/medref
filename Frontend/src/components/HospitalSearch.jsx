@@ -16,6 +16,7 @@ const HospitalSearch = ({ onSelectHospital }) => {
   const [selectedHospital, setSelectedHospital] = useState(null)
   const [viewMode, setViewMode] = useState("list") // "list" or "map"
   const [userLocation, setUserLocation] = useState(null)
+  const [showMap, setShowMap] = useState(false) // Control when to render the map component
 
   useEffect(() => {
     // Get user's location
@@ -91,15 +92,33 @@ const HospitalSearch = ({ onSelectHospital }) => {
 
     try {
       const { lat, lng } = userLocation
-      const response = await axios.get(`${API_URL}/api/hospitals/near?lat=${lat}&lng=${lng}&radius=20`)
-      setHospitals(response.data)
-      setFilteredHospitals(response.data)
-      setViewMode("map") // Switch to map view
+      // First check if the API endpoint exists
+      try {
+        const response = await axios.get(`${API_URL}/api/hospitals/near?lat=${lat}&lng=${lng}&radius=20`)
+        setHospitals(response.data)
+        setFilteredHospitals(response.data)
+      } catch (err) {
+        console.error("Error fetching nearby hospitals:", err)
+        setError("Failed to find nearby hospitals. Showing all hospitals instead.")
+      }
+
+      // Switch to map view
+      setViewMode("map")
+      // Ensure map component is rendered
+      setShowMap(true)
     } catch (err) {
-      console.error("Error fetching nearby hospitals:", err)
+      console.error("Error in searchNearbyHospitals:", err)
       setError("Failed to load nearby hospitals. Please try again.")
     } finally {
       setLoading(false)
+    }
+  }
+
+  // When switching to map view, ensure the map component is rendered
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode)
+    if (mode === "map") {
+      setShowMap(true)
     }
   }
 
@@ -130,7 +149,7 @@ const HospitalSearch = ({ onSelectHospital }) => {
         <div className="flex justify-between items-center mb-4">
           <div className="flex space-x-2">
             <button
-              onClick={() => setViewMode("list")}
+              onClick={() => handleViewModeChange("list")}
               className={`flex items-center px-3 py-1 rounded-md ${
                 viewMode === "list" ? "bg-primary text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
@@ -139,7 +158,7 @@ const HospitalSearch = ({ onSelectHospital }) => {
               List View
             </button>
             <button
-              onClick={() => setViewMode("map")}
+              onClick={() => handleViewModeChange("map")}
               className={`flex items-center px-3 py-1 rounded-md ${
                 viewMode === "map" ? "bg-primary text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
@@ -220,7 +239,8 @@ const HospitalSearch = ({ onSelectHospital }) => {
               </div>
             )
           ) : (
-            <HospitalMap selectedHospital={selectedHospital} onSelectHospital={handleHospitalSelect} />
+            // Only render the map component when needed
+            showMap && <HospitalMap selectedHospital={selectedHospital} onSelectHospital={handleHospitalSelect} />
           )}
         </div>
       )}

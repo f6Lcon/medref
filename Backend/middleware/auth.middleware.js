@@ -1,25 +1,23 @@
 import jwt from "jsonwebtoken"
 import asyncHandler from "express-async-handler"
 import User from "../models/user.model.js"
+import Doctor from "../models/doctor.model.js"
+import Patient from "../models/patient.model.js"
 
-// Protect routes
 const protect = asyncHandler(async (req, res, next) => {
   let token
 
   if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
     try {
-      // Get token from header
       token = req.headers.authorization.split(" ")[1]
 
-      // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET)
 
-      // Get user from the token
       req.user = await User.findById(decoded.id).select("-password")
 
       next()
     } catch (error) {
-      console.error("Auth middleware error:", error)
+      console.error(error)
       res.status(401)
       throw new Error("Not authorized, token failed")
     }
@@ -32,33 +30,47 @@ const protect = asyncHandler(async (req, res, next) => {
 })
 
 // Admin middleware
-const admin = (req, res, next) => {
+const admin = asyncHandler(async (req, res, next) => {
   if (req.user && req.user.role === "admin") {
     next()
   } else {
     res.status(401)
     throw new Error("Not authorized as an admin")
   }
-}
+})
 
 // Doctor middleware
-const doctor = (req, res, next) => {
-  if (req.user && (req.user.role === "doctor" || req.user.role === "admin")) {
+const doctor = asyncHandler(async (req, res, next) => {
+  if (req.user && req.user.role === "doctor") {
+    // Optionally fetch doctor details
+    const doctorDetails = await Doctor.findOne({ user: req.user._id })
+    if (!doctorDetails) {
+      res.status(404)
+      throw new Error("Doctor profile not found")
+    }
+    req.doctor = doctorDetails
     next()
   } else {
     res.status(401)
     throw new Error("Not authorized as a doctor")
   }
-}
+})
 
 // Patient middleware
-const patient = (req, res, next) => {
+const patient = asyncHandler(async (req, res, next) => {
   if (req.user && req.user.role === "patient") {
+    // Optionally fetch patient details
+    const patientDetails = await Patient.findOne({ user: req.user._id })
+    if (!patientDetails) {
+      res.status(404)
+      throw new Error("Patient profile not found")
+    }
+    req.patient = patientDetails
     next()
   } else {
     res.status(401)
     throw new Error("Not authorized as a patient")
   }
-}
+})
 
 export { protect, admin, doctor, patient }
