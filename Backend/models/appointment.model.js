@@ -26,17 +26,14 @@ const appointmentSchema = mongoose.Schema(
       required: true,
     },
     duration: {
-      type: Number, // in minutes
-      default: 30,
-    },
-    status: {
-      type: String,
-      enum: ["scheduled", "completed", "cancelled", "no-show", "rescheduled"],
-      default: "scheduled",
+      type: Number,
+      required: true,
+      default: 30, // Default duration in minutes
     },
     type: {
       type: String,
-      enum: ["regular", "follow-up", "emergency", "referral"],
+      required: true,
+      enum: ["regular", "followup", "emergency", "referral"],
       default: "regular",
     },
     reason: {
@@ -46,9 +43,42 @@ const appointmentSchema = mongoose.Schema(
     notes: {
       type: String,
     },
+    status: {
+      type: String,
+      required: true,
+      enum: ["scheduled", "completed", "cancelled", "rescheduled", "noshow"],
+      default: "scheduled",
+    },
     referral: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Referral",
+    },
+    completionDetails: {
+      diagnosis: {
+        type: String,
+      },
+      treatment: {
+        type: String,
+      },
+      prescription: {
+        type: String,
+      },
+      followUpNeeded: {
+        type: Boolean,
+        default: false,
+      },
+      followUpDate: {
+        type: Date,
+      },
+      followUpNotes: {
+        type: String,
+      },
+      additionalNotes: {
+        type: String,
+      },
+      completedAt: {
+        type: Date,
+      },
     },
   },
   {

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useContext } from "react"
 import axios from "axios"
 import { FaCheck, FaTimes, FaCalendarPlus, FaNotesMedical } from "react-icons/fa"
+import LoginContext from "../context/LoginContext"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
@@ -14,6 +15,7 @@ const ReferralActions = ({ referral, onReferralUpdate, onScheduleAppointment }) 
   const [error, setError] = useState("")
   const [notes, setNotes] = useState("")
   const [showNotes, setShowNotes] = useState(false)
+  const { userRole } = useContext(LoginContext)
 
   // Update the handleReferralUpdate function to properly update the UI
   const updateStatus = async (newStatus) => {
@@ -124,12 +126,15 @@ const ReferralActions = ({ referral, onReferralUpdate, onScheduleAppointment }) 
     )
   }
 
+  // Check if user is a doctor before showing action buttons
+  const isDoctor = userRole === "doctor" || userRole === "admin"
+
   return (
     <div className="space-y-2">
       {error && <div className="text-red-500 text-sm">{error}</div>}
 
       <div className="flex flex-wrap gap-2">
-        {referral.status === "pending" && (
+        {referral.status === "pending" && isDoctor && (
           <>
             <button
               onClick={() => updateStatus("accepted")}
@@ -149,7 +154,7 @@ const ReferralActions = ({ referral, onReferralUpdate, onScheduleAppointment }) 
           </>
         )}
 
-        {referral.status === "accepted" && !referral.appointmentCreated && (
+        {referral.status === "accepted" && !referral.appointmentCreated && isDoctor && (
           <button
             onClick={() => onScheduleAppointment && onScheduleAppointment(referral)}
             disabled={loading}

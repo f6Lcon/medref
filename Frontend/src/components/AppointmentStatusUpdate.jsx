@@ -1,187 +1,197 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import axios from "axios"
-import { FaCheck, FaTimes, FaClock, FaNotesMedical } from "react-icons/fa"
+import { useNavigate } from "react-router-dom"
+import { FaCheck, FaSpinner, FaTimes, FaClipboardCheck } from "react-icons/fa"
+import AppointmentCompletion from "./AppointmentCompletion"
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
-/**
- * Component for doctors to update appointment status
- */
-const AppointmentStatusUpdate = ({ appointment, onStatusUpdate }) => {
-  const [loading, setLoading] = useState(false)
+const AppointmentStatusUpdate = ({ appointmentId, onStatusUpdate }) => {
+  const [appointment, setAppointment] = useState(null)
+  const [status, setStatus] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
   const [error, setError] = useState("")
-  const [notes, setNotes] = useState("")
-  const [showNotes, setShowNotes] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [showCompletionForm, setShowCompletionForm] = useState(false)
+  const navigate = useNavigate()
 
-  const updateStatus = async (newStatus) => {
-    setLoading(true)
-    setError("")
+  useEffect(() => {
+    const fetchAppointment = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          navigate("/login")
+          return
+        }
 
-    try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        setError("You must be logged in to update appointment status")
+        const response = await axios.get(`${API_URL}/api/appointments/${appointmentId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        setAppointment(response.data)
+        setStatus(response.data.status)
         setLoading(false)
-        return
+      } catch (err) {
+        console.error("Error fetching appointment:", err)
+        setError("Failed to load appointment details")
+        setLoading(false)
       }
-
-      const response = await axios.put(
-        `${API_URL}/api/appointments/${appointment._id}/status`,
-        { status: newStatus },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      )
-
-      // Call the callback function with the updated appointment
-      if (onStatusUpdate) {
-        onStatusUpdate(response.data)
-      }
-    } catch (err) {
-      console.error("Error updating appointment status:", err)
-      setError(err.response?.data?.message || "Failed to update appointment status")
-    } finally {
-      setLoading(false)
     }
+
+    fetchAppointment()
+  }, [appointmentId, navigate])
+
+  const handleStatusChange = (e) => {
+    setStatus(e.target.value)
   }
 
-  const addNotes = async () => {
-    if (!notes.trim()) {
-      setError("Please enter notes before saving")
+  const handleStatusUpdate = async (e) => {
+    e.preventDefault()
+
+    // If the status is "completed", show the completion form instead of updating directly
+    if (status === "completed") {
+      setShowCompletionForm(true)
       return
     }
 
-    setLoading(true)
+    setUpdating(true)
     setError("")
 
     try {
       const token = localStorage.getItem("token")
       if (!token) {
-        setError("You must be logged in to add notes")
-        setLoading(false)
+        navigate("/login")
         return
       }
 
-      const response = await axios.put(
-        `${API_URL}/api/appointments/${appointment._id}`,
-        { notes },
+      await axios.put(
+        `${API_URL}/api/appointments/${appointmentId}/status`,
+        { status },
         {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         },
       )
 
-      // Call the callback function with the updated appointment
+      setSuccess(true)
+      setUpdating(false)
+
+      // Call the onStatusUpdate callback if provided
       if (onStatusUpdate) {
-        onStatusUpdate(response.data)
+        onStatusUpdate(status)
       }
 
-      // Hide the notes form after successful submission
-      setShowNotes(false)
-      setNotes("")
+      // Reset success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(false)
+      }, 3000)
     } catch (err) {
-      console.error("Error adding notes:", err)
-      setError(err.response?.data?.message || "Failed to add notes")
-    } finally {
-      setLoading(false)
+      console.error("Error updating appointment status:", err)
+      setError(err.response?.data?.message || "Failed to update appointment status")
+      setUpdating(false)
     }
   }
 
-  // Don't show update options for completed or cancelled appointments
-  if (appointment.status === "completed" || appointment.status === "cancelled") {
+  const handleCompletionSuccess = (updatedAppointment) => {
+    setAppointment(updatedAppointment)
+    setStatus("completed")
+    setShowCompletionForm(false)
+    setSuccess(true)
+
+    // Call the onStatusUpdate callback if provided
+    if (onStatusUpdate) {
+      onStatusUpdate("completed")
+    }
+
+    // Reset success message after 3 seconds
+    setTimeout(() => {
+      setSuccess(false)
+    }, 3000)
+  }
+
+  if (loading) {
     return (
-      <div className="flex items-center space-x-2">
-        <span
-          className={`px-2 py-1 text-xs rounded-full ${
-            appointment.status === "completed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-          }`}
-        >
-          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-        </span>
+      <div className="flex justify-center items-center p-4">
+        <FaSpinner className="animate-spin text-primary" size={24} />
+      </div>
+    )
+  }
+
+  if (showCompletionForm) {
+    return (
+      <div className="bg-white rounded-md shadow p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-800">Complete Appointment</h3>
+          <button onClick={() => setShowCompletionForm(false)} className="text-gray-500 hover:text-gray-700">
+            <FaTimes />
+          </button>
+        </div>
+        <AppointmentCompletion appointment={appointment} onSuccess={handleCompletionSuccess} />
       </div>
     )
   }
 
   return (
-    <div className="space-y-2">
-      {error && <div className="text-red-500 text-sm">{error}</div>}
+    <div className="bg-white rounded-md shadow p-4">
+      <h3 className="text-lg font-medium text-gray-800 mb-4">Update Appointment Status</h3>
 
-      <div className="flex flex-wrap gap-2">
-        {appointment.status !== "completed" && (
-          <button
-            onClick={() => updateStatus("completed")}
-            disabled={loading}
-            className="flex items-center px-2 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200 text-xs font-medium transition"
-          >
-            <FaCheck className="mr-1" /> Complete
-          </button>
-        )}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
-        {appointment.status !== "no-show" && (
-          <button
-            onClick={() => updateStatus("no-show")}
-            disabled={loading}
-            className="flex items-center px-2 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 text-xs font-medium transition"
-          >
-            <FaTimes className="mr-1" /> No-show
-          </button>
-        )}
-
-        {appointment.status !== "cancelled" && (
-          <button
-            onClick={() => updateStatus("cancelled")}
-            disabled={loading}
-            className="flex items-center px-2 py-1 bg-red-100 text-red-800 rounded hover:bg-red-200 text-xs font-medium transition"
-          >
-            <FaTimes className="mr-1" /> Cancel
-          </button>
-        )}
-
-        {appointment.status !== "rescheduled" && (
-          <button
-            onClick={() => updateStatus("rescheduled")}
-            disabled={loading}
-            className="flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 text-xs font-medium transition"
-          >
-            <FaClock className="mr-1" /> Reschedule
-          </button>
-        )}
-
-        <button
-          onClick={() => setShowNotes(!showNotes)}
-          className="flex items-center px-2 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 text-xs font-medium transition"
-        >
-          <FaNotesMedical className="mr-1" /> {showNotes ? "Hide Notes" : "Add Notes"}
-        </button>
-      </div>
-
-      {showNotes && (
-        <div className="mt-2">
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Enter appointment notes..."
-            className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            rows={3}
-          ></textarea>
-          <div className="flex justify-end mt-1">
-            <button
-              onClick={addNotes}
-              disabled={loading}
-              className="px-3 py-1 bg-primary text-white rounded text-xs hover:bg-accent transition"
-            >
-              Save Notes
-            </button>
-          </div>
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+          Appointment status updated successfully!
         </div>
       )}
+
+      <form onSubmit={handleStatusUpdate}>
+        <div className="mb-4">
+          <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+            Status
+          </label>
+          <select
+            id="status"
+            name="status"
+            value={status}
+            onChange={handleStatusChange}
+            className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="scheduled">Scheduled</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="rescheduled">Rescheduled</option>
+            <option value="noshow">No Show</option>
+          </select>
+        </div>
+
+        <div className="flex justify-end">
+          {status === "completed" ? (
+            <button
+              type="submit"
+              className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition flex items-center"
+            >
+              <FaClipboardCheck className="mr-2" /> Complete with Details
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={updating || status === appointment.status}
+              className="bg-primary text-white py-2 px-4 rounded-md hover:bg-accent transition flex items-center disabled:opacity-50"
+            >
+              {updating ? (
+                <>
+                  <FaSpinner className="animate-spin mr-2" /> Updating...
+                </>
+              ) : (
+                <>
+                  <FaCheck className="mr-2" /> Update Status
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </form>
     </div>
   )
 }

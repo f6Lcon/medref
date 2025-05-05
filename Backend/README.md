@@ -191,6 +191,43 @@ All protected routes require a **Bearer Token** (JWT) in the `Authorization` hea
 | PUT    | /referrals/:id/status             | Update referral status                        | Doctor        |
 | POST   | /referrals/:id/appointment        | Create appointment from referral              | Doctor        |
 
+# API Documentation
+
+## API Endpoints
+
+### Referrals
+
+| Method | Endpoint | Description | Access |
+|--------|----------|-------------|--------|
+| POST | `/api/referrals` | Create a new referral to a hospital (and optionally a doctor) | Private/Doctor |
+| GET | `/api/referrals/patient` | Get all referrals for current patient | Private |
+| GET | `/api/referrals/referring` | Get all referrals made by current doctor | Private/Doctor |
+| GET | `/api/referrals/referred` | Get all referrals to current doctor | Private/Doctor |
+| GET | `/api/referrals/:id` | Get referral by ID | Private* |
+| PUT | `/api/referrals/:id/status` | Update referral status | Private/Doctor |
+| POST | `/api/referrals/:id/appointment` | Create appointment from referral | Private/Doctor |
+
+### Appointments
+
+| Method | Endpoint | Description | Access |
+|--------|----------|-------------|--------|
+| POST | `/api/appointments` | Create a new appointment | Private |
+| POST | `/api/appointments/from-referral` | Create a new appointment from a referral | Private/Doctor |
+| GET | `/api/appointments/patient` | Get all appointments for current patient | Private |
+| GET | `/api/appointments/doctor` | Get all appointments for current doctor | Private/Doctor |
+| GET | `/api/appointments/all` | Get all appointments | Private/Admin |
+| GET | `/api/appointments/:id` | Get appointment by ID | Private* |
+| PUT | `/api/appointments/:id/status` | Update appointment status | Private/Doctor |
+| PUT | `/api/appointments/:id/cancel` | Cancel appointment | Private* |
+| PUT | `/api/appointments/:id/complete` | Complete appointment and send summary email | Private/Doctor |
+
+*Private with restrictions: The user must be related to the resource (patient, doctor, or admin)
+
+\`\`\`
+
+Now, let's create a component for doctors to complete appointments:
+
+
 ---
 
 ## 📘 Example Usage (Frontend Devs)

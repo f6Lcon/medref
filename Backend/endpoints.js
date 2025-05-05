@@ -104,3 +104,36 @@
  * PUT /api/admins/profile - Update admin profile (requires admin role)
  * GET /api/admin/db-stats - Get database statistics (requires admin role)
  */
+
+/**
+ * Referral Endpoints
+ * ----------------
+ * POST /api/referrals - Create a new referral (requires doctor role)
+ *    - Body: { patient, referredToHospital, referredToDoctor (optional), reason, notes, urgency, medicalRecords }
+ * GET /api/referrals/patient - Get all referrals for current patient (requires authentication)
+ * GET /api/referrals/referring - Get all referrals made by current doctor (requires doctor role)
+ * GET /api/referrals/referred - Get all referrals to current doctor (requires doctor role)
+ * GET /api/referrals/:id - Get referral by ID (requires authentication, restricted to relevant users)
+ * PUT /api/referrals/:id/status - Update referral status (requires doctor role)
+ * POST /api/referrals/:id/appointment - Create appointment from referral (requires doctor role)
+ *    - Body: { date, time, duration, notes }
+ */
+
+/**
+ * Appointment Endpoints
+ * ----------------
+ * POST /api/appointments - Create a new appointment (requires authentication)
+ *    - Body: { doctor, hospital, date, time, duration, type, reason, notes, referral (optional) }
+ * POST /api/appointments/from-referral - Create a new appointment from a referral (requires doctor role)
+ *    - Body: { referralId, date, time, duration, notes }
+ * GET /api/appointments/patient - Get all appointments for current patient (requires authentication)
+ * GET /api/appointments/doctor - Get all appointments for current doctor (requires doctor role)
+ * GET /api/appointments/all - Get all appointments (requires admin role)
+ * GET /api/appointments/:id - Get appointment by ID (requires authentication, restricted to relevant users)
+ * PUT /api/appointments/:id/status - Update appointment status (requires doctor role)
+ *    - Body: { status }
+ * PUT /api/appointments/:id/cancel - Cancel appointment (requires authentication, restricted to relevant users)
+ * PUT /api/appointments/:id/complete - Complete appointment and send summary email (requires doctor role)
+ *    - Body: { diagnosis, treatment, prescription, followUpNeeded, followUpDate, followUpNotes, additionalNotes }
+ */
+

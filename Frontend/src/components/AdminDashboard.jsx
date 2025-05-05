@@ -22,6 +22,7 @@ import {
   FaEdit,
   FaTrash,
   FaTimes,
+  FaClipboardCheck,
 } from "react-icons/fa"
 import LoginContext from "../context/LoginContext"
 import AddHospitalForm from "./AddHospitalForm"
@@ -56,6 +57,8 @@ const AdminDashboard = () => {
   const [editingUser, setEditingUser] = useState(null)
   const [deletingUser, setDeletingUser] = useState(null)
   const [userActionLoading, setUserActionLoading] = useState(false)
+  const [completedAppointments, setCompletedAppointments] = useState([])
+  const [completedReferrals, setCompletedReferrals] = useState([])
 
   const fetchData = async () => {
     const token = localStorage.getItem("token")
@@ -63,6 +66,9 @@ const AdminDashboard = () => {
       navigate("/login")
       return
     }
+
+    // Set default authorization header for all requests
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`
 
     try {
       setLoading(true)
@@ -152,6 +158,10 @@ const AdminDashboard = () => {
           headers: { Authorization: `Bearer ${token}` },
         })
         setAppointments(appointmentsResponse.data || [])
+
+        // Filter completed appointments
+        const completedAppts = appointmentsResponse.data.filter((appointment) => appointment.status === "completed")
+        setCompletedAppointments(completedAppts)
       } catch (err) {
         console.error("Error fetching appointments:", err)
         // If the endpoint doesn't exist yet, we'll just use an empty array
@@ -165,6 +175,12 @@ const AdminDashboard = () => {
           headers: { Authorization: `Bearer ${token}` },
         })
         setReferrals(referralsResponse.data || [])
+
+        // Filter completed referrals (those with status "completed" or with appointmentCreated=true)
+        const completedRefs = referralsResponse.data.filter(
+          (referral) => referral.status === "completed" || referral.appointmentCreated === true,
+        )
+        setCompletedReferrals(completedRefs)
       } catch (err) {
         console.error("Error fetching referrals:", err)
         // If the endpoint doesn't exist yet, we'll just use an empty array
@@ -486,6 +502,15 @@ const AdminDashboard = () => {
               <FaDatabase />
               <span>Database</span>
             </button>
+            <button
+              onClick={() => setActiveTab("completed")}
+              className={`w-full flex items-center space-x-3 p-3 rounded-md transition ${
+                activeTab === "completed" ? "bg-primary text-white" : "hover:bg-gray-100"
+              }`}
+            >
+              <FaClipboardCheck />
+              <span>Completed</span>
+            </button>
           </nav>
         </div>
 
@@ -524,7 +549,9 @@ const AdminDashboard = () => {
                             ? "System Reports"
                             : activeTab === "settings"
                               ? "System Settings"
-                              : "Database Management"}
+                              : activeTab === "database"
+                                ? "Database Management"
+                                : "Completed Appointments"}
             </h1>
             <p className="text-gray-500">
               Welcome back, {userData?.name || "Administrator"}. Here's your system overview.
@@ -675,6 +702,62 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Completed Appointments & Referrals */}
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">Completed Appointments & Referrals</h2>
+                <button className="text-primary hover:underline text-sm font-medium">View All</button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Completed Appointments */}
+                <div>
+                  <h3 className="text-md font-medium text-gray-700 mb-3">Recent Completed Appointments</h3>
+                  {completedAppointments.length > 0 ? (
+                    <div className="space-y-3">
+                      {completedAppointments.slice(0, 3).map((appointment) => (
+                        <div key={appointment._id} className="border-l-4 border-green-500 pl-3 py-2">
+                          <p className="text-sm font-medium">
+                            Dr. {appointment.doctor?.user?.name || "Unknown"} with{" "}
+                            {appointment.patient?.user?.name || "Unknown Patient"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(appointment.date)} -{" "}
+                            {appointment.completionDetails?.diagnosis || "No diagnosis recorded"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No completed appointments found.</p>
+                  )}
+                </div>
+
+                {/* Completed Referrals */}
+                <div>
+                  <h3 className="text-md font-medium text-gray-700 mb-3">Recent Completed Referrals</h3>
+                  {completedReferrals.length > 0 ? (
+                    <div className="space-y-3">
+                      {completedReferrals.slice(0, 3).map((referral) => (
+                        <div key={referral._id} className="border-l-4 border-blue-500 pl-3 py-2">
+                          <p className="text-sm font-medium">
+                            From Dr. {referral.referringDoctor?.user?.name || "Unknown"} to Dr.{" "}
+                            {referral.referredToDoctor?.user?.name || "Specialist"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Patient: {referral.patient?.user?.name || "Unknown"} -{" "}
+                            {referral.appointmentCreated ? "Appointment Created" : "Completed"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No completed referrals found.</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1403,6 +1486,129 @@ const AdminDashboard = () => {
                 <button className="bg-primary text-white py-2 px-4 rounded-md hover:bg-accent transition">
                   Save Settings
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Completed Appointments Tab */}
+        {activeTab === "completed" && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Completed Appointments</h2>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search completed appointments..."
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Patient
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Doctor
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Date & Time
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Diagnosis
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Follow-Up
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {completedAppointments.length > 0 ? (
+                      completedAppointments.map((appointment) => (
+                        <tr key={appointment._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {appointment.patient?.user?.name || "Unknown"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              Dr. {appointment.doctor?.user?.name || "Unknown"}
+                            </div>
+                            <div className="text-xs text-gray-500">{appointment.doctor?.specialization}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{formatDate(appointment.date)}</div>
+                            <div className="text-xs text-gray-500">{appointment.time}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900">
+                              {appointment.completionDetails?.diagnosis || "Not recorded"}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {appointment.completionDetails?.treatment || "No treatment recorded"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                appointment.completionDetails?.followUpNeeded
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-green-100 text-green-800"
+                              }`}
+                            >
+                              {appointment.completionDetails?.followUpNeeded ? "Required" : "Not Required"}
+                            </span>
+                            {appointment.completionDetails?.followUpNeeded &&
+                              appointment.completionDetails?.followUpDate && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {formatDate(appointment.completionDetails.followUpDate)}
+                                </div>
+                              )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button className="text-primary hover:text-accent mr-3">
+                              <FaEdit /> View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                          No completed appointments found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
