@@ -53,16 +53,21 @@ const ConversationList = ({ selectedConversation, setSelectedConversation, refre
   }
 
   if (loading) {
-    return <div className="p-4 text-center">Loading conversations...</div>
+    return (
+      <div className="p-4 text-center">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p className="mt-2 text-gray-600">Loading conversations...</p>
+      </div>
+    )
   }
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 border-b">
+      <div className="p-4 bg-blue-500 text-white">
         <h2 className="text-xl font-semibold">Messages</h2>
         <button
           onClick={handleNewConversation}
-          className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition duration-200"
+          className="mt-2 w-full bg-white text-blue-500 hover:bg-gray-100 py-2 px-4 rounded-md transition duration-200 font-medium"
         >
           New Conversation
         </button>
@@ -70,7 +75,26 @@ const ConversationList = ({ selectedConversation, setSelectedConversation, refre
 
       <div className="flex-1 overflow-y-auto">
         {conversations.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">No conversations yet</div>
+          <div className="p-8 text-center text-gray-500">
+            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-8 w-8 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                />
+              </svg>
+            </div>
+            <p className="text-lg">No conversations yet</p>
+            <p className="text-sm mt-1">Start a new conversation to connect with doctors and patients</p>
+          </div>
         ) : (
           conversations.map((conversation) => {
             const participant = conversation.participants[0]
@@ -82,15 +106,20 @@ const ConversationList = ({ selectedConversation, setSelectedConversation, refre
                 }`}
                 onClick={() => handleSelectConversation(conversation)}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="font-medium">{participant?.name}</h3>
-                    <p className="text-sm text-gray-600 truncate">
+                <div className="flex items-start">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 font-bold mr-3 flex-shrink-0">
+                    {participant?.name?.charAt(0).toUpperCase() || "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline">
+                      <h3 className="font-medium truncate">{participant?.name}</h3>
+                      <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
+                        {formatTimestamp(conversation.lastMessage?.createdAt || conversation.updatedAt)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 truncate mt-1">
                       {conversation.lastMessage?.content || "No messages yet"}
                     </p>
-                  </div>
-                  <div className="text-xs text-gray-500 whitespace-nowrap ml-2">
-                    {formatTimestamp(conversation.lastMessage?.createdAt || conversation.updatedAt)}
                   </div>
                 </div>
                 {conversation.unreadCount > 0 && (
