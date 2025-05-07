@@ -20,6 +20,13 @@ const AppointmentStatusUpdate = ({ appointmentId, onStatusUpdate }) => {
 
   useEffect(() => {
     const fetchAppointment = async () => {
+      // Don't attempt to fetch if appointmentId is undefined
+      if (!appointmentId) {
+        setError("Today")
+        setLoading(false)
+        return
+      }
+
       try {
         const token = localStorage.getItem("token")
         if (!token) {
@@ -119,6 +126,15 @@ const AppointmentStatusUpdate = ({ appointmentId, onStatusUpdate }) => {
     )
   }
 
+  // Show error state if there's no appointment after loading
+  if (!appointment) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        {error || "Could not load appointment details"}
+      </div>
+    )
+  }
+
   if (showCompletionForm) {
     return (
       <div className="bg-white rounded-md shadow p-4">
@@ -176,7 +192,7 @@ const AppointmentStatusUpdate = ({ appointmentId, onStatusUpdate }) => {
           ) : (
             <button
               type="submit"
-              disabled={updating || status === appointment.status}
+              disabled={updating || (appointment && status === appointment.status)}
               className="bg-primary text-white py-2 px-4 rounded-md hover:bg-accent transition flex items-center disabled:opacity-50"
             >
               {updating ? (
