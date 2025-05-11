@@ -1,7 +1,10 @@
 {
-  "functions": {
-    "api/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  }
+  "version": 1,
+  "name":"MEDREF",
+  "builds":[
+      {"src":"server.js","use":"@vercel/node"}
+  ],
+  "routes":[
+      {"src":"/(.*)","dest":"/server.js"}
+  ]
 }
