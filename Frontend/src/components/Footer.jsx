@@ -7,7 +7,7 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   const socialLinks = [
-    { icon: FaTwitter, href: 'https://x.com/initials101', color: 'text-blue-400' },
+    { icon: FaTwitter, href: 'https://x.com/f61con', color: 'text-blue-400' },
     { icon: FaInstagram, href: 'https://www.instagram.com/ni_murry/', color: 'text-pink-500' },
     { icon: FaLinkedinIn, href: 'https://www.linkedin.com/in/initials101', color: 'text-blue-700' },
   ];
@@ -71,7 +71,7 @@ const Footer = () => {
               rel="noopener noreferrer"
               className="text-accent underline hover:text-accent/80"
             >
-              initials101
+              FALCON
             </a>
           </p>
         </div>
